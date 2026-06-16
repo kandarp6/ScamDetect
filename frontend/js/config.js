@@ -5,7 +5,7 @@ const ENV = {
     BACKEND_URL: "http://localhost:8000",
   },
   production: {
-    BACKEND_URL: "https://fake-internship-scam-job-detection-api.onrender.com",
+    BACKEND_URL: "https://scamdetect-kcz5.onrender.com",
   }
 };
 
