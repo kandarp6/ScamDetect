@@ -29,6 +29,11 @@ except:
     nltk.download("punkt")
 
 try:
+    nltk.data.find("tokenizers/punkt_tab")
+except:
+    nltk.download("punkt_tab")
+
+try:
     nltk.data.find("corpora/stopwords")
 except:
     nltk.download("stopwords")
@@ -403,4 +408,4 @@ def process_job_description(text: str) -> dict:
 
 def calculate_final_score(keyword_score: float, ml_score: float) -> dict:
     final_score = round((keyword_score * 0.6) + (ml_score * 0.4), 2)
-    return {"final_score": final_score}
+    return {"final_score": final_score}
