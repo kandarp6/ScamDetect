@@ -1,0 +1,46 @@
+﻿# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Environment variables (NEVER commit)
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Data files (large, generated)
+data/logs/*.log
+data/training/*.csv
+backend/ml/models/*.pkl
+backend/ml/models/*.json
+
+# Node modules (frontend)
+node_modules/
+dist/
+build/
+.next/
+
+# OS
+Thumbs.db
+desktop.ini
+
+# Backup
+*_BACKUP_*.zip

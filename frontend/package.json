@@ -1,0 +1,15 @@
+﻿{
+  "name": "scamguard-frontend",
+  "version": "1.0.0",
+  "description": "ScamGuard - Fake Job Detection Frontend",
+  "scripts": {
+    "dev": "npx http-server -p 3000 -o -c-1",
+    "build": "echo Static site - no build needed"
+  },
+  "keywords": ["scam-detection", "job-fraud", "india"],
+  "author": "Team H - DSA Graphura India",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

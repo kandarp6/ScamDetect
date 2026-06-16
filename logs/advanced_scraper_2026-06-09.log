@@ -1,0 +1,418 @@
+2026-06-09 16:49:00.767 | INFO     | __main__:main:415 - ======================================================================
+2026-06-09 16:49:00.767 | INFO     | __main__:main:416 - 🚀 GRAPHURA ADVANCED SCRAPER — Starting
+2026-06-09 16:49:00.767 | INFO     | __main__:main:417 - ======================================================================
+2026-06-09 16:49:00.767 | INFO     | __main__:main:418 - 📍 Platforms : internshala
+2026-06-09 16:49:00.775 | INFO     | __main__:main:419 - 🔍 Keywords  : software engineer, python developer, data analyst, full stack developer, ai engineer, data scientist, machine learning engineer
+2026-06-09 16:49:00.775 | INFO     | __main__:main:420 - 📊 Per query : 5
+2026-06-09 16:49:00.778 | INFO     | __main__:main:421 - ⏱️  Delays    : 4.0-8.0s
+2026-06-09 16:49:00.781 | INFO     | __main__:main:422 - 👁️  Headless  : False
+2026-06-09 16:49:00.784 | INFO     | __main__:main:423 - ======================================================================
+2026-06-09 16:49:06.369 | INFO     | __main__:main:429 - 💾 Supabase connected. Jobs in DB: 38
+2026-06-09 16:49:06.483 | INFO     | __main__:main:437 - 🔁 Loaded 38 existing job hashes for dedup
+2026-06-09 16:49:09.871 | INFO     | __main__:main:455 - 
+──────────────────────────────────────────────────────────────────────
+2026-06-09 16:49:09.871 | INFO     | __main__:main:456 - 🕷️  Starting: Internshala
+2026-06-09 16:49:09.874 | INFO     | __main__:main:457 - ──────────────────────────────────────────────────────────────────────
+2026-06-09 16:49:13.926 | INFO     | __main__:scrape_platform:341 - 🔍 [Internshala] https://internshala.com/internships/keywords-software-engineer/
+2026-06-09 16:49:25.467 | INFO     | __main__:scrape_platform:354 -    Found 5 jobs
+2026-06-09 16:49:32.103 | INFO     | __main__:scrape_platform:341 - 🔍 [Internshala] https://internshala.com/internships/keywords-python-developer/
+2026-06-09 16:49:43.840 | INFO     | __main__:scrape_platform:354 -    Found 5 jobs
+2026-06-09 16:49:51.105 | INFO     | __main__:scrape_platform:341 - 🔍 [Internshala] https://internshala.com/internships/keywords-data-analyst/
+2026-06-09 16:50:02.432 | INFO     | __main__:scrape_platform:354 -    Found 5 jobs
+2026-06-09 16:50:07.325 | INFO     | __main__:scrape_platform:341 - 🔍 [Internshala] https://internshala.com/internships/keywords-full-stack-developer/
+2026-06-09 16:50:20.419 | INFO     | __main__:scrape_platform:354 -    Found 5 jobs
+2026-06-09 16:50:26.738 | INFO     | __main__:scrape_platform:341 - 🔍 [Internshala] https://internshala.com/internships/keywords-ai-engineer/
+2026-06-09 16:50:39.311 | INFO     | __main__:scrape_platform:354 -    Found 5 jobs
+2026-06-09 16:50:46.034 | INFO     | __main__:scrape_platform:341 - 🔍 [Internshala] https://internshala.com/internships/keywords-data-scientist/
+2026-06-09 16:50:57.182 | INFO     | __main__:scrape_platform:354 -    Found 5 jobs
+2026-06-09 16:51:01.461 | INFO     | __main__:scrape_platform:341 - 🔍 [Internshala] https://internshala.com/internships/keywords-machine-learning-engineer/
+2026-06-09 16:51:12.454 | INFO     | __main__:scrape_platform:354 -    Found 5 jobs
+2026-06-09 16:51:19.039 | INFO     | __main__:scrape_platform:366 - 📋 [Internshala] Processing 31 unique URLs
+2026-06-09 16:51:25.518 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Digital Marketing - Internship (WFH & Pa
+2026-06-09 16:51:37.841 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: SEO - Internship
+2026-06-09 16:51:49.399 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Content Writing - Internship
+2026-06-09 16:52:00.695 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Digital Marketing - Internship (WFH & Pa
+2026-06-09 16:52:16.841 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: E-commerce Product Research & AI Content
+2026-06-09 16:52:28.368 | INFO     | __main__:process_single_job:272 - ✅ [Internshala] Systems Engineering - Internship         | Score:  10.8 | Safe
+2026-06-09 16:52:40.684 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Python Developer - Internship (Part Time
+2026-06-09 16:52:52.374 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Python Developer - Internship (Part Time
+2026-06-09 16:53:07.164 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Python Developer - Internship (Part Time
+2026-06-09 16:53:17.089 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Python Developer - Internship (Part Time
+2026-06-09 16:53:31.262 | INFO     | __main__:process_single_job:272 - 🔵 [Internshala] Finance Equity Analyst - Internship (WFH | Score:  29.8 | Low Risk
+2026-06-09 16:53:43.541 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Social Entrepreneurship - Internship (WF
+2026-06-09 16:53:54.076 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: SDR - B2B Outbound (AI Data Services) - 
+2026-06-09 16:54:08.324 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Data Entry - Internship
+2026-06-09 16:54:22.732 | INFO     | __main__:process_single_job:272 - 🔵 [Internshala] Data Analysis - Internship               | Score:  31.2 | Low Risk
+2026-06-09 16:54:35.446 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Full Stack Developer - Internship (WFH)
+2026-06-09 16:54:48.257 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Full Stack Developer - Internship
+2026-06-09 16:54:59.728 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Developer - Full-Stack - Internship
+2026-06-09 16:55:10.644 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Full Stack Developer - Internship
+2026-06-09 16:55:22.564 | INFO     | __main__:process_single_job:272 - ✅ [Internshala] Full Stack Developer Intern - Internship | Score:  16.2 | Safe
+2026-06-09 16:55:35.312 | INFO     | __main__:process_single_job:272 - 🔵 [Internshala] Digital Marketing & Generative AI - Inte | Score:  29.8 | Low Risk
+2026-06-09 16:55:47.514 | INFO     | __main__:process_single_job:272 - 🔵 [Internshala] AI Digital Marketing - Internship        | Score:  29.8 | Low Risk
+2026-06-09 16:55:59.673 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Cloud Consultant - Internship
+2026-06-09 16:56:12.610 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Data Scientist - Internship (Part Time)
+2026-06-09 16:56:23.816 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Data Scientist - Internship (Part Time)
+2026-06-09 16:56:37.705 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Data Scientist - Internship (Part Time)
+2026-06-09 16:56:48.899 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Machine Learning - Internship (WFH)
+2026-06-09 16:57:03.234 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Machine Learning - Internship (WFH & Par
+2026-06-09 16:57:15.514 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Machine Learning - Internship (WFH)
+2026-06-09 16:57:28.858 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Machine Learning - Internship (WFH & Par
+2026-06-09 16:57:43.265 | DEBUG    | __main__:process_single_job:208 - 🔁 Duplicate: Machine Learning - Internship (WFH)
+2026-06-09 16:57:52.490 | INFO     | __main__:main:473 - 
+======================================================================
+2026-06-09 16:57:52.490 | INFO     | __main__:main:474 - 📊 SCRAPE SUMMARY
+2026-06-09 16:57:52.490 | INFO     | __main__:main:475 - ======================================================================
+2026-06-09 16:57:52.490 | INFO     | __main__:main:483 -   Internshala               | Saved:    6 | Skipped:   25 | Failed:    0 | High-risk:   0
+2026-06-09 16:57:52.490 | INFO     | __main__:main:495 - ----------------------------------------------------------------------
+2026-06-09 16:57:52.490 | INFO     | __main__:main:496 -   TOTAL                     | Saved:    6 | Skipped:   25 | Failed:    0 | High-risk:   0
+2026-06-09 16:57:52.490 | INFO     | __main__:main:502 - 
+⏱️  Duration: 531.0s
+2026-06-09 16:57:52.503 | INFO     | __main__:main:503 - 💾 DB: 38 → 44 (+6 new)
+2026-06-09 16:57:52.505 | INFO     | __main__:main:507 - 
+======================================================================
+2026-06-09 16:57:52.505 | INFO     | __main__:main:508 - ✅ Scraping complete!
+2026-06-09 16:57:52.509 | INFO     | __main__:main:509 - ======================================================================
+2026-06-09 19:02:24.360 | INFO     | __main__:main:393 - ======================================================================
+2026-06-09 19:02:24.360 | INFO     | __main__:main:394 - GRAPHURA SCRAPER - Starting
+2026-06-09 19:02:24.360 | INFO     | __main__:main:395 - ======================================================================
+2026-06-09 19:02:24.360 | INFO     | __main__:main:396 - Platforms : internshala
+2026-06-09 19:02:24.365 | INFO     | __main__:main:397 - Keywords  : software engineer, python developer, data analyst, full stack developer, ai engineer, data scientist, machine learning engineer
+2026-06-09 19:02:24.366 | INFO     | __main__:main:398 - Per query : 5
+2026-06-09 19:02:24.366 | INFO     | __main__:main:399 - Delays    : 4.0-8.0s
+2026-06-09 19:02:24.366 | INFO     | __main__:main:400 - Headless  : False
+2026-06-09 19:02:24.369 | INFO     | __main__:main:401 - ======================================================================
+2026-06-09 19:02:26.023 | INFO     | __main__:main:407 - Supabase connected. Jobs in DB: 44
+2026-06-09 19:02:26.080 | INFO     | __main__:main:415 - Loaded 44 existing job hashes for dedup
+2026-06-09 19:02:27.213 | INFO     | __main__:main:433 - 
+----------------------------------------------------------------------
+2026-06-09 19:02:27.213 | INFO     | __main__:main:434 - Starting: Internshala
+2026-06-09 19:02:27.213 | INFO     | __main__:main:435 - ----------------------------------------------------------------------
+2026-06-09 19:02:29.533 | INFO     | __main__:scrape_platform:319 - [Internshala] Searching: https://internshala.com/internships/keywords-software-engineer/
+2026-06-09 19:02:41.928 | INFO     | __main__:scrape_platform:332 -    Found 5 jobs
+2026-06-09 19:02:46.730 | INFO     | __main__:scrape_platform:319 - [Internshala] Searching: https://internshala.com/internships/keywords-python-developer/
+2026-06-09 19:02:58.616 | INFO     | __main__:scrape_platform:332 -    Found 5 jobs
+2026-06-09 19:03:05.730 | INFO     | __main__:scrape_platform:319 - [Internshala] Searching: https://internshala.com/internships/keywords-data-analyst/
+2026-06-09 19:03:15.763 | INFO     | __main__:scrape_platform:332 -    Found 5 jobs
+2026-06-09 19:03:23.707 | INFO     | __main__:scrape_platform:319 - [Internshala] Searching: https://internshala.com/internships/keywords-full-stack-developer/
+2026-06-09 19:03:35.072 | INFO     | __main__:scrape_platform:332 -    Found 5 jobs
+2026-06-09 19:03:42.501 | INFO     | __main__:scrape_platform:319 - [Internshala] Searching: https://internshala.com/internships/keywords-ai-engineer/
+2026-06-09 19:03:53.654 | INFO     | __main__:scrape_platform:332 -    Found 5 jobs
+2026-06-09 19:03:59.432 | INFO     | __main__:scrape_platform:319 - [Internshala] Searching: https://internshala.com/internships/keywords-data-scientist/
+2026-06-09 19:04:19.332 | INFO     | __main__:scrape_platform:332 -    Found 5 jobs
+2026-06-09 19:04:27.134 | INFO     | __main__:scrape_platform:319 - [Internshala] Searching: https://internshala.com/internships/keywords-machine-learning-engineer/
+2026-06-09 19:04:58.036 | WARNING  | __main__:scrape_platform:336 -    Search failed: Timeout 30000ms exceeded.
+2026-06-09 19:05:05.146 | INFO     | __main__:scrape_platform:344 - [Internshala] Processing 25 unique URLs
+2026-06-09 19:06:16.230 | INFO     | __main__:process_single_job:250 - [LOW]   [Internshala] 502 Bad Gateway                          | Score:  37.2 | Low Risk
+2026-06-09 19:06:25.654 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:06:35.506 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:06:46.356 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:06:57.287 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:07:08.991 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:07:20.198 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:07:31.373 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:07:41.996 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:07:53.102 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:08:04.683 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:08:15.443 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:08:27.692 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:08:37.131 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:08:46.584 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:08:57.863 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:09:10.043 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:09:22.358 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:09:31.693 | DEBUG    | __main__:process_single_job:188 - Duplicate: 502 Bad Gateway
+2026-06-09 19:09:40.310 | INFO     | __main__:main:451 - 
+======================================================================
+2026-06-09 19:09:40.316 | INFO     | __main__:main:452 - SCRAPE SUMMARY
+2026-06-09 19:09:40.319 | INFO     | __main__:main:453 - ======================================================================
+2026-06-09 19:09:40.319 | INFO     | __main__:main:461 -   Internshala               | Saved:    1 | Skipped:   18 | Failed:    6 | High-risk:   0
+2026-06-09 19:09:40.322 | INFO     | __main__:main:473 - ----------------------------------------------------------------------
+2026-06-09 19:09:40.324 | INFO     | __main__:main:474 -   TOTAL                     | Saved:    1 | Skipped:   18 | Failed:    6 | High-risk:   0
+2026-06-09 19:09:40.326 | INFO     | __main__:main:482 - 
+Duration: 435.3s
+2026-06-09 19:09:40.327 | INFO     | __main__:main:483 - DB: 44 -> 45 (+1 new)
+2026-06-09 19:09:40.332 | INFO     | __main__:main:487 - 
+======================================================================
+2026-06-09 19:09:40.334 | INFO     | __main__:main:488 - Scraping complete
+2026-06-09 19:09:40.336 | INFO     | __main__:main:489 - ======================================================================
+2026-06-09 19:13:49.173 | INFO     | __main__:main:462 - ======================================================================
+2026-06-09 19:13:49.173 | INFO     | __main__:main:463 - GRAPHURA SCRAPER - Starting
+2026-06-09 19:13:49.181 | INFO     | __main__:main:464 - ======================================================================
+2026-06-09 19:13:49.181 | INFO     | __main__:main:465 - Platforms : internshala
+2026-06-09 19:13:49.181 | INFO     | __main__:main:466 - Keywords  : software engineer, python developer, data analyst, full stack developer, ai engineer, data scientist, machine learning engineer
+2026-06-09 19:13:49.184 | INFO     | __main__:main:467 - Per query : 5
+2026-06-09 19:13:49.184 | INFO     | __main__:main:468 - Delays    : 4.0-8.0s
+2026-06-09 19:13:49.184 | INFO     | __main__:main:469 - Headless  : False
+2026-06-09 19:13:49.186 | INFO     | __main__:main:470 - ======================================================================
+2026-06-09 19:13:50.879 | INFO     | __main__:main:476 - Supabase connected. Jobs in DB: 45
+2026-06-09 19:16:30.039 | INFO     | __main__:main:464 - ======================================================================
+2026-06-09 19:16:30.042 | INFO     | __main__:main:465 - GRAPHURA SCRAPER - Starting
+2026-06-09 19:16:30.044 | INFO     | __main__:main:466 - ======================================================================
+2026-06-09 19:16:30.044 | INFO     | __main__:main:467 - Platforms : internshala
+2026-06-09 19:16:30.044 | INFO     | __main__:main:468 - Keywords  : software engineer, python developer, data analyst, full stack developer, ai engineer, data scientist, machine learning engineer
+2026-06-09 19:16:30.044 | INFO     | __main__:main:469 - Per query : 5
+2026-06-09 19:16:30.044 | INFO     | __main__:main:470 - Delays    : 4.0-8.0s
+2026-06-09 19:16:30.047 | INFO     | __main__:main:471 - Headless  : False
+2026-06-09 19:16:30.047 | INFO     | __main__:main:472 - ======================================================================
+2026-06-09 19:16:31.855 | INFO     | __main__:main:478 - Supabase connected. Jobs in DB: 45
+2026-06-09 19:16:31.918 | INFO     | __main__:main:486 - Loaded 45 existing job hashes
+2026-06-09 19:16:31.969 | INFO     | __main__:main:490 - Loaded 45 existing source URLs
+2026-06-09 19:16:32.972 | INFO     | __main__:main:508 - 
+----------------------------------------------------------------------
+2026-06-09 19:16:32.972 | INFO     | __main__:main:509 - Starting: Internshala
+2026-06-09 19:16:32.972 | INFO     | __main__:main:510 - ----------------------------------------------------------------------
+2026-06-09 19:16:34.953 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-software-engineer/
+2026-06-09 19:16:47.273 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:16:52.670 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-python-developer/
+2026-06-09 19:17:03.925 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:17:08.202 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-data-analyst/
+2026-06-09 19:17:19.658 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:17:25.618 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-full-stack-developer/
+2026-06-09 19:17:37.736 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:17:42.726 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-ai-engineer/
+2026-06-09 19:17:54.459 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:18:00.375 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-data-scientist/
+2026-06-09 19:18:11.886 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:18:18.577 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-machine-learning-engineer/
+2026-06-09 19:18:29.906 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:18:35.274 | INFO     | __main__:scrape_platform:411 - [Internshala] Processing 7 new URLs (filtered 21 already-seen)
+2026-06-09 19:18:42.219 | DEBUG    | __main__:process_single_job:244 - Duplicate hash: AI Blog Writing - Internship (WFH)
+2026-06-09 19:18:53.389 | DEBUG    | __main__:process_single_job:244 - Duplicate hash: Python Developer - Internship (Part Time
+2026-06-09 19:19:06.050 | DEBUG    | __main__:process_single_job:244 - Duplicate hash: Python Developer - Internship (Part Time
+2026-06-09 19:19:18.864 | INFO     | __main__:process_single_job:307 - [LOW]   [Internshala] AI Web Development - Internship (WFH)    | Score:  29.8 | Low Risk
+2026-06-09 19:19:31.716 | DEBUG    | __main__:process_single_job:244 - Duplicate hash: AI Data Analytics - Internship (WFH)
+2026-06-09 19:19:46.389 | INFO     | __main__:process_single_job:307 - [MED]   [Internshala] Business Development (Sales) - Internshi | Score:  50.8 | Medium Risk
+2026-06-09 19:19:59.419 | DEBUG    | __main__:process_single_job:244 - Duplicate hash: Machine Learning - Internship (WFH)
+2026-06-09 19:20:07.462 | INFO     | __main__:main:526 - 
+======================================================================
+2026-06-09 19:20:07.462 | INFO     | __main__:main:527 - SCRAPE SUMMARY
+2026-06-09 19:20:07.469 | INFO     | __main__:main:528 - ======================================================================
+2026-06-09 19:20:07.469 | INFO     | __main__:main:536 -   Internshala               | Saved:    2 | Skipped:   26 | Failed:    0 | High-risk:   0
+2026-06-09 19:20:07.469 | INFO     | __main__:main:548 - ----------------------------------------------------------------------
+2026-06-09 19:20:07.469 | INFO     | __main__:main:549 -   TOTAL                     | Saved:    2 | Skipped:   26 | Failed:    0 | High-risk:   0
+2026-06-09 19:20:07.469 | INFO     | __main__:main:557 - 
+Duration: 217.2s
+2026-06-09 19:20:07.469 | INFO     | __main__:main:558 - DB: 45 -> 47 (+2 new)
+2026-06-09 19:20:07.478 | INFO     | __main__:main:562 - 
+======================================================================
+2026-06-09 19:20:07.478 | INFO     | __main__:main:563 - Scraping complete
+2026-06-09 19:20:07.478 | INFO     | __main__:main:564 - ======================================================================
+2026-06-09 19:28:09.101 | INFO     | __main__:main:464 - ======================================================================
+2026-06-09 19:28:09.102 | INFO     | __main__:main:465 - GRAPHURA SCRAPER - Starting
+2026-06-09 19:28:09.102 | INFO     | __main__:main:466 - ======================================================================
+2026-06-09 19:28:09.103 | INFO     | __main__:main:467 - Platforms : internshala
+2026-06-09 19:28:09.103 | INFO     | __main__:main:468 - Keywords  : software engineer, python developer, data analyst, full stack developer, ai engineer, data scientist, machine learning engineer
+2026-06-09 19:28:09.103 | INFO     | __main__:main:469 - Per query : 5
+2026-06-09 19:28:09.103 | INFO     | __main__:main:470 - Delays    : 4.0-8.0s
+2026-06-09 19:28:09.104 | INFO     | __main__:main:471 - Headless  : False
+2026-06-09 19:28:09.104 | INFO     | __main__:main:472 - ======================================================================
+2026-06-09 19:28:09.831 | INFO     | __main__:main:478 - Supabase connected. Jobs in DB: 47
+2026-06-09 19:28:09.876 | INFO     | __main__:main:486 - Loaded 47 existing job hashes
+2026-06-09 19:28:09.920 | INFO     | __main__:main:490 - Loaded 47 existing source URLs
+2026-06-09 19:28:18.650 | INFO     | __main__:main:508 - 
+----------------------------------------------------------------------
+2026-06-09 19:28:18.650 | INFO     | __main__:main:509 - Starting: Internshala
+2026-06-09 19:28:18.650 | INFO     | __main__:main:510 - ----------------------------------------------------------------------
+2026-06-09 19:28:20.409 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-software-engineer/
+2026-06-09 19:28:37.564 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:28:42.723 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-python-developer/
+2026-06-09 19:28:53.243 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:29:01.095 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-data-analyst/
+2026-06-09 19:29:11.397 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:29:16.325 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-full-stack-developer/
+2026-06-09 19:29:26.100 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:29:32.076 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-ai-engineer/
+2026-06-09 19:29:40.887 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:29:45.055 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-data-scientist/
+2026-06-09 19:29:55.169 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:30:00.020 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-machine-learning-engineer/
+2026-06-09 19:30:09.548 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:30:16.820 | INFO     | __main__:scrape_platform:411 - [Internshala] Processing 7 new URLs (filtered 25 already-seen)
+2026-06-09 19:30:21.949 | DEBUG    | __main__:process_single_job:244 - Duplicate hash: AI Blog Writing - Internship (WFH)
+2026-06-09 19:30:33.183 | DEBUG    | __main__:process_single_job:244 - Duplicate hash: Python Developer - Internship (Part Time
+2026-06-09 19:30:41.047 | DEBUG    | __main__:process_single_job:244 - Duplicate hash: Python Developer - Internship (Part Time
+2026-06-09 19:30:49.969 | INFO     | __main__:process_single_job:307 - [LOW]   [Internshala] Field Sales Intern - Internship          | Score:  29.8 | Low Risk
+2026-06-09 19:30:57.917 | DEBUG    | __main__:process_single_job:244 - Duplicate hash: AI Data Analytics - Internship (WFH)
+2026-06-09 19:31:06.548 | INFO     | __main__:process_single_job:307 - [SAFE]  [Internshala] Project Management - Internship          | Score:  16.2 | Safe
+2026-06-09 19:31:17.817 | DEBUG    | __main__:process_single_job:244 - Duplicate hash: Machine Learning - Internship (WFH)
+2026-06-09 19:31:25.013 | INFO     | __main__:main:526 - 
+======================================================================
+2026-06-09 19:31:25.013 | INFO     | __main__:main:527 - SCRAPE SUMMARY
+2026-06-09 19:31:25.013 | INFO     | __main__:main:528 - ======================================================================
+2026-06-09 19:31:25.013 | INFO     | __main__:main:536 -   Internshala               | Saved:    2 | Skipped:   30 | Failed:    0 | High-risk:   0
+2026-06-09 19:31:25.013 | INFO     | __main__:main:548 - ----------------------------------------------------------------------
+2026-06-09 19:31:25.013 | INFO     | __main__:main:549 -   TOTAL                     | Saved:    2 | Skipped:   30 | Failed:    0 | High-risk:   0
+2026-06-09 19:31:25.013 | INFO     | __main__:main:557 - 
+Duration: 195.8s
+2026-06-09 19:31:25.013 | INFO     | __main__:main:558 - DB: 47 -> 49 (+2 new)
+2026-06-09 19:31:25.026 | INFO     | __main__:main:562 - 
+======================================================================
+2026-06-09 19:31:25.027 | INFO     | __main__:main:563 - Scraping complete
+2026-06-09 19:31:25.028 | INFO     | __main__:main:564 - ======================================================================
+2026-06-09 19:38:21.772 | INFO     | __main__:main:464 - ======================================================================
+2026-06-09 19:38:21.772 | INFO     | __main__:main:465 - GRAPHURA SCRAPER - Starting
+2026-06-09 19:38:21.772 | INFO     | __main__:main:466 - ======================================================================
+2026-06-09 19:38:21.772 | INFO     | __main__:main:467 - Platforms : internshala
+2026-06-09 19:38:21.772 | INFO     | __main__:main:468 - Keywords  : software engineer, python developer, data analyst, full stack developer, ai engineer, data scientist, machine learning engineer
+2026-06-09 19:38:21.772 | INFO     | __main__:main:469 - Per query : 5
+2026-06-09 19:38:21.772 | INFO     | __main__:main:470 - Delays    : 4.0-8.0s
+2026-06-09 19:38:21.772 | INFO     | __main__:main:471 - Headless  : False
+2026-06-09 19:38:21.772 | INFO     | __main__:main:472 - ======================================================================
+2026-06-09 19:38:23.072 | INFO     | __main__:main:478 - Supabase connected. Jobs in DB: 49
+2026-06-09 19:38:23.118 | INFO     | __main__:main:486 - Loaded 49 existing job hashes
+2026-06-09 19:38:23.168 | INFO     | __main__:main:490 - Loaded 49 existing source URLs
+2026-06-09 19:38:23.576 | INFO     | __main__:main:508 - 
+----------------------------------------------------------------------
+2026-06-09 19:38:23.577 | INFO     | __main__:main:509 - Starting: Internshala
+2026-06-09 19:38:23.577 | INFO     | __main__:main:510 - ----------------------------------------------------------------------
+2026-06-09 19:38:24.638 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-software-engineer/
+2026-06-09 19:38:41.173 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:38:46.724 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-python-developer/
+2026-06-09 19:38:56.977 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:39:02.892 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-data-analyst/
+2026-06-09 19:39:12.663 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:39:19.143 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-full-stack-developer/
+2026-06-09 19:39:29.383 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:39:35.694 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-ai-engineer/
+2026-06-09 19:39:46.054 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:39:50.924 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-data-scientist/
+2026-06-09 19:40:00.513 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:40:04.988 | INFO     | __main__:scrape_platform:379 - [Internshala] Searching: https://internshala.com/internships/keywords-machine-learning-engineer/
+2026-06-09 19:40:14.451 | INFO     | __main__:scrape_platform:392 -    Found 5 jobs
+2026-06-09 19:40:18.771 | INFO     | __main__:scrape_platform:411 - [Internshala] Processing 5 new URLs (filtered 25 already-seen)
+2026-06-09 19:40:23.724 | DEBUG    | __main__:process_single_job:244 - Duplicate hash: AI Blog Writing - Internship (WFH)
+2026-06-09 19:40:35.588 | DEBUG    | __main__:process_single_job:244 - Duplicate hash: Python Developer - Internship (Part Time
+2026-06-09 19:40:45.945 | DEBUG    | __main__:process_single_job:244 - Duplicate hash: Python Developer - Internship (Part Time
+2026-06-09 19:40:58.180 | DEBUG    | __main__:process_single_job:244 - Duplicate hash: AI Data Analytics - Internship (WFH)
+2026-06-09 19:41:08.966 | DEBUG    | __main__:process_single_job:244 - Duplicate hash: Machine Learning - Internship (WFH)
+2026-06-09 19:41:17.413 | INFO     | __main__:main:526 - 
+======================================================================
+2026-06-09 19:41:17.413 | INFO     | __main__:main:527 - SCRAPE SUMMARY
+2026-06-09 19:41:17.413 | INFO     | __main__:main:528 - ======================================================================
+2026-06-09 19:41:17.413 | INFO     | __main__:main:536 -   Internshala               | Saved:    0 | Skipped:   30 | Failed:    0 | High-risk:   0
+2026-06-09 19:41:17.413 | INFO     | __main__:main:548 - ----------------------------------------------------------------------
+2026-06-09 19:41:17.423 | INFO     | __main__:main:549 -   TOTAL                     | Saved:    0 | Skipped:   30 | Failed:    0 | High-risk:   0
+2026-06-09 19:41:17.423 | INFO     | __main__:main:557 - 
+Duration: 174.7s
+2026-06-09 19:41:17.423 | INFO     | __main__:main:558 - DB: 49 -> 49 (+0 new)
+2026-06-09 19:41:17.423 | INFO     | __main__:main:562 - 
+======================================================================
+2026-06-09 19:41:17.425 | INFO     | __main__:main:563 - Scraping complete
+2026-06-09 19:41:17.425 | INFO     | __main__:main:564 - ======================================================================
+2026-06-09 20:19:15.148 | INFO     | __main__:main:471 - ======================================================================
+2026-06-09 20:19:15.148 | INFO     | __main__:main:472 - GRAPHURA SCRAPER - Starting
+2026-06-09 20:19:15.148 | INFO     | __main__:main:473 - ======================================================================
+2026-06-09 20:19:15.148 | INFO     | __main__:main:474 - Platforms : internshala
+2026-06-09 20:19:15.148 | INFO     | __main__:main:475 - Keywords  : software engineer, python developer, data analyst, full stack developer, ai engineer, data scientist, machine learning engineer
+2026-06-09 20:19:15.148 | INFO     | __main__:main:476 - Per query : 5
+2026-06-09 20:19:15.148 | INFO     | __main__:main:477 - Delays    : 4.0-8.0s
+2026-06-09 20:19:15.148 | INFO     | __main__:main:478 - Headless  : False
+2026-06-09 20:19:15.148 | INFO     | __main__:main:479 - ======================================================================
+2026-06-09 20:19:15.928 | INFO     | __main__:main:485 - Supabase connected. Jobs in DB: 49
+2026-06-09 20:19:16.025 | INFO     | __main__:main:494 - Loaded 49 hashes and 49 URLs for dedup
+2026-06-09 20:19:16.458 | INFO     | __main__:main:512 - 
+----------------------------------------------------------------------
+2026-06-09 20:19:16.458 | INFO     | __main__:main:513 - Starting: Internshala
+2026-06-09 20:19:16.459 | INFO     | __main__:main:514 - ----------------------------------------------------------------------
+2026-06-09 20:19:17.664 | INFO     | __main__:scrape_platform:386 - [Internshala] Searching: https://internshala.com/internships/keywords-software-engineer/
+2026-06-09 20:19:35.625 | INFO     | __main__:scrape_platform:399 -    Found 5 jobs
+2026-06-09 20:19:40.604 | INFO     | __main__:scrape_platform:386 - [Internshala] Searching: https://internshala.com/internships/keywords-python-developer/
+2026-06-09 20:19:46.805 | INFO     | __main__:scrape_platform:399 -    Found 0 jobs
+2026-06-09 20:20:55.242 | INFO     | __main__:main:471 - ======================================================================
+2026-06-09 20:20:55.246 | INFO     | __main__:main:472 - GRAPHURA SCRAPER - Starting
+2026-06-09 20:20:55.248 | INFO     | __main__:main:473 - ======================================================================
+2026-06-09 20:20:55.249 | INFO     | __main__:main:474 - Platforms : internshala
+2026-06-09 20:20:55.251 | INFO     | __main__:main:475 - Keywords  : software engineer, python developer, data analyst, full stack developer, ai engineer, data scientist, machine learning engineer
+2026-06-09 20:20:55.252 | INFO     | __main__:main:476 - Per query : 5
+2026-06-09 20:20:55.252 | INFO     | __main__:main:477 - Delays    : 4.0-8.0s
+2026-06-09 20:20:55.254 | INFO     | __main__:main:478 - Headless  : False
+2026-06-09 20:20:55.254 | INFO     | __main__:main:479 - ======================================================================
+2026-06-09 20:20:56.567 | INFO     | __main__:main:485 - Supabase connected. Jobs in DB: 49
+2026-06-09 20:20:56.668 | INFO     | __main__:main:494 - Loaded 49 hashes and 49 URLs for dedup
+2026-06-09 20:20:57.113 | INFO     | __main__:main:512 - 
+----------------------------------------------------------------------
+2026-06-09 20:20:57.114 | INFO     | __main__:main:513 - Starting: Internshala
+2026-06-09 20:20:57.114 | INFO     | __main__:main:514 - ----------------------------------------------------------------------
+2026-06-09 20:20:58.625 | INFO     | __main__:scrape_platform:386 - [Internshala] Searching: https://internshala.com/internships/keywords-software-engineer/
+2026-06-09 20:21:09.535 | INFO     | __main__:scrape_platform:399 -    Found 5 jobs
+2026-06-09 20:21:17.559 | INFO     | __main__:scrape_platform:386 - [Internshala] Searching: https://internshala.com/internships/keywords-python-developer/
+2026-06-09 20:21:26.975 | INFO     | __main__:scrape_platform:399 -    Found 5 jobs
+2026-06-09 20:21:35.040 | INFO     | __main__:scrape_platform:386 - [Internshala] Searching: https://internshala.com/internships/keywords-data-analyst/
+2026-06-09 20:21:44.363 | INFO     | __main__:scrape_platform:399 -    Found 5 jobs
+2026-06-09 20:21:49.325 | INFO     | __main__:scrape_platform:386 - [Internshala] Searching: https://internshala.com/internships/keywords-full-stack-developer/
+2026-06-09 20:21:59.904 | INFO     | __main__:scrape_platform:399 -    Found 5 jobs
+2026-06-09 20:22:05.078 | INFO     | __main__:scrape_platform:386 - [Internshala] Searching: https://internshala.com/internships/keywords-ai-engineer/
+2026-06-09 20:22:15.822 | INFO     | __main__:scrape_platform:399 -    Found 5 jobs
+2026-06-09 20:22:23.011 | INFO     | __main__:scrape_platform:386 - [Internshala] Searching: https://internshala.com/internships/keywords-data-scientist/
+2026-06-09 20:22:32.959 | INFO     | __main__:scrape_platform:399 -    Found 5 jobs
+2026-06-09 20:22:38.797 | INFO     | __main__:scrape_platform:386 - [Internshala] Searching: https://internshala.com/internships/keywords-machine-learning-engineer/
+2026-06-09 20:22:48.440 | INFO     | __main__:scrape_platform:399 -    Found 5 jobs
+2026-06-09 20:22:55.657 | INFO     | __main__:scrape_platform:418 - [Internshala] Processing 5 new URLs (filtered 24 already-seen)
+2026-06-09 20:23:01.328 | DEBUG    | __main__:process_single_job:241 - Duplicate hash: AI Blog Writing - Internship (WFH)
+2026-06-09 20:23:10.025 | DEBUG    | __main__:process_single_job:241 - Duplicate hash: Python Developer - Internship (Part Time
+2026-06-09 20:23:23.545 | DEBUG    | __main__:process_single_job:241 - Duplicate hash: Python Developer - Internship (Part Time
+2026-06-09 20:23:35.062 | DEBUG    | __main__:process_single_job:241 - Duplicate hash: AI Data Analytics - Internship (WFH)
+2026-06-09 20:23:46.703 | DEBUG    | __main__:process_single_job:241 - Duplicate hash: Machine Learning - Internship (WFH)
+2026-06-09 20:23:55.476 | INFO     | __main__:main:533 - 
+======================================================================
+2026-06-09 20:23:55.476 | INFO     | __main__:main:534 - SCRAPE SUMMARY
+2026-06-09 20:23:55.476 | INFO     | __main__:main:535 - ======================================================================
+2026-06-09 20:23:55.486 | INFO     | __main__:main:543 -   Internshala               | Saved:    0 | Skipped:   29 | Failed:    0 | High-risk:   0
+2026-06-09 20:23:55.486 | INFO     | __main__:main:555 - ----------------------------------------------------------------------
+2026-06-09 20:23:55.489 | INFO     | __main__:main:556 -   TOTAL                     | Saved:    0 | Skipped:   29 | Failed:    0 | High-risk:   0
+2026-06-09 20:23:55.489 | INFO     | __main__:main:564 - 
+Duration: 179.4s
+2026-06-09 20:23:55.491 | INFO     | __main__:main:565 - DB: 49 -> 49 (+0 new)
+2026-06-09 20:23:55.492 | INFO     | __main__:main:569 - 
+======================================================================
+2026-06-09 20:23:55.492 | INFO     | __main__:main:570 - Scraping complete
+2026-06-09 20:23:55.493 | INFO     | __main__:main:571 - ======================================================================
+2026-06-09 20:28:33.231 | INFO     | __main__:main:471 - ======================================================================
+2026-06-09 20:28:33.231 | INFO     | __main__:main:472 - GRAPHURA SCRAPER - Starting
+2026-06-09 20:28:33.231 | INFO     | __main__:main:473 - ======================================================================
+2026-06-09 20:28:33.231 | INFO     | __main__:main:474 - Platforms : internshala
+2026-06-09 20:28:33.231 | INFO     | __main__:main:475 - Keywords  : software engineer, python developer, data analyst, full stack developer, ai engineer, data scientist, machine learning engineer
+2026-06-09 20:28:33.231 | INFO     | __main__:main:476 - Per query : 5
+2026-06-09 20:28:33.231 | INFO     | __main__:main:477 - Delays    : 4.0-8.0s
+2026-06-09 20:28:33.231 | INFO     | __main__:main:478 - Headless  : False
+2026-06-09 20:28:33.231 | INFO     | __main__:main:479 - ======================================================================
+2026-06-09 20:28:33.992 | INFO     | __main__:main:485 - Supabase connected. Jobs in DB: 49
+2026-06-09 20:28:34.161 | INFO     | __main__:main:494 - Loaded 49 hashes and 49 URLs for dedup
+2026-06-09 20:28:34.556 | INFO     | __main__:main:512 - 
+----------------------------------------------------------------------
+2026-06-09 20:28:34.556 | INFO     | __main__:main:513 - Starting: Internshala
+2026-06-09 20:28:34.556 | INFO     | __main__:main:514 - ----------------------------------------------------------------------
+2026-06-09 20:28:35.647 | INFO     | __main__:scrape_platform:386 - [Internshala] Searching: https://internshala.com/internships/keywords-software-engineer/
+2026-06-09 20:28:51.577 | INFO     | __main__:scrape_platform:399 -    Found 5 jobs
+2026-06-09 20:28:56.141 | INFO     | __main__:scrape_platform:386 - [Internshala] Searching: https://internshala.com/internships/keywords-python-developer/
+2026-06-09 20:29:05.665 | INFO     | __main__:scrape_platform:399 -    Found 5 jobs
+2026-06-09 20:29:09.773 | INFO     | __main__:scrape_platform:386 - [Internshala] Searching: https://internshala.com/internships/keywords-data-analyst/
+2026-06-09 20:29:19.779 | INFO     | __main__:scrape_platform:399 -    Found 5 jobs
+2026-06-09 20:29:27.521 | INFO     | __main__:scrape_platform:386 - [Internshala] Searching: https://internshala.com/internships/keywords-full-stack-developer/
+2026-06-09 20:29:38.369 | INFO     | __main__:scrape_platform:399 -    Found 5 jobs
+2026-06-09 20:29:42.817 | INFO     | __main__:scrape_platform:386 - [Internshala] Searching: https://internshala.com/internships/keywords-ai-engineer/
+2026-06-09 20:29:52.668 | INFO     | __main__:scrape_platform:399 -    Found 5 jobs
+2026-06-09 20:29:57.021 | INFO     | __main__:scrape_platform:386 - [Internshala] Searching: https://internshala.com/internships/keywords-data-scientist/
+2026-06-09 20:30:06.639 | INFO     | __main__:scrape_platform:399 -    Found 5 jobs
+2026-06-09 20:30:12.802 | INFO     | __main__:scrape_platform:386 - [Internshala] Searching: https://internshala.com/internships/keywords-machine-learning-engineer/
+2026-06-09 20:30:23.176 | INFO     | __main__:scrape_platform:399 -    Found 5 jobs
+2026-06-09 20:30:29.566 | INFO     | __main__:scrape_platform:418 - [Internshala] Processing 4 new URLs (filtered 25 already-seen)
+2026-06-09 20:30:33.514 | DEBUG    | __main__:process_single_job:241 - Duplicate hash: Python Developer - Internship (Part Time
+2026-06-09 20:30:42.484 | DEBUG    | __main__:process_single_job:241 - Duplicate hash: Python Developer - Internship (Part Time
+2026-06-09 20:30:54.662 | DEBUG    | __main__:process_single_job:241 - Duplicate hash: AI Data Analytics - Internship (WFH)
+2026-06-09 20:31:07.260 | DEBUG    | __main__:process_single_job:241 - Duplicate hash: Machine Learning - Internship (WFH)
+2026-06-09 20:31:12.228 | INFO     | __main__:main:533 - 
+======================================================================
+2026-06-09 20:31:12.228 | INFO     | __main__:main:534 - SCRAPE SUMMARY
+2026-06-09 20:31:12.228 | INFO     | __main__:main:535 - ======================================================================
+2026-06-09 20:31:12.228 | INFO     | __main__:main:543 -   Internshala               | Saved:    0 | Skipped:   29 | Failed:    0 | High-risk:   0
+2026-06-09 20:31:12.228 | INFO     | __main__:main:555 - ----------------------------------------------------------------------
+2026-06-09 20:31:12.228 | INFO     | __main__:main:556 -   TOTAL                     | Saved:    0 | Skipped:   29 | Failed:    0 | High-risk:   0
+2026-06-09 20:31:12.228 | INFO     | __main__:main:564 - 
+Duration: 158.6s
+2026-06-09 20:31:12.242 | INFO     | __main__:main:565 - DB: 49 -> 49 (+0 new)
+2026-06-09 20:31:12.244 | INFO     | __main__:main:569 - 
+======================================================================
+2026-06-09 20:31:12.246 | INFO     | __main__:main:570 - Scraping complete
+2026-06-09 20:31:12.246 | INFO     | __main__:main:571 - ======================================================================
