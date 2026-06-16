@@ -9,7 +9,6 @@ import re
 import asyncio
 from urllib.parse import urlparse
 from playwright.async_api import async_playwright
-from playwright_stealth import Stealth
 from loguru import logger
 
 from backend.scraper.connectors import CONNECTOR_REGISTRY
