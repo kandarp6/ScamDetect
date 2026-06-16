@@ -31,7 +31,6 @@ from backend.scraper.storage.supabase_client import (
     get_existing_job_hashes,
 )
 from backend.scraper.engines.url_scraper import scrape_job_url
-from playwright_stealth import Stealth
 
 
 
@@ -578,4 +577,4 @@ app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="127.0.0.1", port=port)
+    uvicorn.run(app, host="127.0.0.1", port=port)
