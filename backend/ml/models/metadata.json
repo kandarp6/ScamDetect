@@ -1,0 +1,31 @@
+{
+  "models": {
+    "random_forest": {
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "path": "D:\\Madhav_Gagneja\\DATA_SCRAPER\\Graphura\\backend\\ml\\models\\random_forest.pkl"
+    },
+    "xgboost": {
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "path": "D:\\Madhav_Gagneja\\DATA_SCRAPER\\Graphura\\backend\\ml\\models\\xgboost.pkl"
+    },
+    "isolation_forest": {
+      "path": "D:\\Madhav_Gagneja\\DATA_SCRAPER\\Graphura\\backend\\ml\\models\\isolation_forest.pkl"
+    }
+  },
+  "cross_validation": {
+    "rf_cv_f1_mean": 1.0,
+    "rf_cv_f1_std": 0.0,
+    "xgb_cv_f1_mean": 0.9937438905180841,
+    "xgb_cv_f1_std": 0.012512218963831857
+  },
+  "training_data": {
+    "total_jobs": 197,
+    "real_jobs": 49,
+    "synthetic_scams": 98,
+    "synthetic_legit": 50,
+    "features": 146
+  },
+  "trained_at": "2026-06-15T00:56:41.789770"
+}
