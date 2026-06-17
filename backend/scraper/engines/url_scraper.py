@@ -2,7 +2,9 @@
 
 
 import os
-os.environ["PLAYWRIGHT_BROWSERS_PATH"] = r"C:\pw-browsers"
+
+if os.getenv("RENDER"):
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
 
 import re
 import asyncio

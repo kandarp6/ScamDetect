@@ -30,7 +30,7 @@ numba==0.65.1
 numpy==2.4.6
 packaging==26.2
 pandas==3.0.3
-playwright==1.40.0
+playwright==1.53.0
 playwright-stealth==1.0.6
 postgrest==2.31.0
 propcache==0.5.2
