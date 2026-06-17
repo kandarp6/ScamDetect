@@ -1,17 +1,6 @@
-"""
-connectors/linkedin.py
-LinkedIn scraper - public listings only (no login required).
 
-Legal basis: hiQ Labs v. LinkedIn (9th Cir. 2022) - scraping publicly
-available data does not violate the CFAA.
+#connectors/linkedin.py
 
-Anti-detection:
-    - playwright-stealth patches navigator.webdriver
-    - User-agent + viewport + locale rotation per session
-    - Random human-like delays and scroll patterns
-    - Login-wall and captcha detection
-    - Chromium flags to mask automation signals
-"""
 
 import re
 import asyncio
@@ -141,9 +130,7 @@ class LinkedInConnector(BaseConnector):
         ),
     }
 
-    # ------------------------------------------------------------------------
     # Per-session fingerprint
-    # ------------------------------------------------------------------------
 
     def __init__(self, config: dict):
         super().__init__(config)
@@ -165,9 +152,7 @@ class LinkedInConnector(BaseConnector):
             "timezone_id": self.session_timezone,
         }
 
-    # ------------------------------------------------------------------------
     # Search URL builder
-    # ------------------------------------------------------------------------
 
     def search_urls(self, keywords: list[str], location: str) -> list[str]:
         urls = []
@@ -181,9 +166,7 @@ class LinkedInConnector(BaseConnector):
             ))
         return urls
 
-    # ------------------------------------------------------------------------
     # Pre-search warm-up
-    # ------------------------------------------------------------------------
 
     async def pre_search_hook(self, page: Page) -> None:
         """
@@ -204,9 +187,7 @@ class LinkedInConnector(BaseConnector):
         except Exception:
             pass
 
-    # ------------------------------------------------------------------------
     # Popup / login-wall handling
-    # ------------------------------------------------------------------------
 
     async def handle_popups(self, page: Page) -> None:
         """Dismiss login modals and overlays that block scraping."""
@@ -238,9 +219,7 @@ class LinkedInConnector(BaseConnector):
         except Exception:
             pass
 
-    # ------------------------------------------------------------------------
     # Job link extraction
-    # ------------------------------------------------------------------------
 
     async def extract_job_links(self, page: Page) -> list[str]:
         if await self._is_error_page(page):
@@ -281,9 +260,7 @@ class LinkedInConnector(BaseConnector):
 
         return clean_links[: self.jobs_per_query]
 
-    # ------------------------------------------------------------------------
     # Job data extraction
-    # ------------------------------------------------------------------------
 
     async def extract_job_data(self, page: Page, url: str) -> Optional[RawJob]:
         await self.handle_popups(page)
@@ -338,9 +315,7 @@ class LinkedInConnector(BaseConnector):
             },
         )
 
-    # ------------------------------------------------------------------------
     # Private helpers
-    # ------------------------------------------------------------------------
 
     async def _is_error_page(self, page: Page) -> bool:
         """Detect server errors, captchas, and login walls."""

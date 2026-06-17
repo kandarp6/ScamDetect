@@ -1,28 +1,10 @@
-"""
-recruiter_verifier.py
-Compute recruiter_verification_score (0-100).
+#recruiter_verifier.py
 
-Strong signals for legit recruiters:
-    - Corporate email (matches company domain)
-    - LinkedIn profile present
-    - Recruiter title ("HR", "Talent Acquisition")
-    - Proper full name
-
-Weak signals (scam-likely):
-    - Gmail/Yahoo email
-    - No LinkedIn
-    - Generic name ("HR Team", "Admin")
-    - Disposable email
-
-Score range: 0 (no trust) -> 100 (highly verified)
-"""
 
 import re
 
 
-# ============================================================================
 # CONSTANTS
-# ============================================================================
 
 DISPOSABLE_DOMAINS = {
     "mailinator.com", "guerrillamail.com", "tempmail.com",
@@ -59,9 +41,7 @@ GENERIC_NAMES = {
 }
 
 
-# ============================================================================
 # MAIN VERIFICATION FUNCTION
-# ============================================================================
 
 def verify_recruiter(
     name: str = "",
@@ -174,9 +154,7 @@ def verify_recruiter(
     return score, flags
 
 
-# ============================================================================
 # HELPER FUNCTIONS
-# ============================================================================
 
 def _domain_matches_company(email_domain: str, company_domain: str) -> bool:
     """
@@ -199,9 +177,7 @@ def _domain_matches_company(email_domain: str, company_domain: str) -> bool:
     return base(email_domain) == base(company_domain)
 
 
-# ============================================================================
 # SELF-TEST
-# ============================================================================
 
 def _self_test():
     print("=" * 70)

@@ -1,0 +1,11 @@
+2026-06-17 03:30:45.427 | INFO     | __main__:main:471 - ======================================================================
+2026-06-17 03:30:45.431 | INFO     | __main__:main:472 - GRAPHURA SCRAPER - Starting
+2026-06-17 03:30:45.431 | INFO     | __main__:main:473 - ======================================================================
+2026-06-17 03:30:45.431 | INFO     | __main__:main:474 - Platforms : internshala
+2026-06-17 03:30:45.433 | INFO     | __main__:main:475 - Keywords  : software engineer, python developer, data analyst, full stack developer, ai engineer, data scientist, machine learning engineer
+2026-06-17 03:30:45.433 | INFO     | __main__:main:476 - Per query : 5
+2026-06-17 03:30:45.433 | INFO     | __main__:main:477 - Delays    : 4.0-8.0s
+2026-06-17 03:30:45.433 | INFO     | __main__:main:478 - Headless  : False
+2026-06-17 03:30:45.433 | INFO     | __main__:main:479 - ======================================================================
+2026-06-17 03:30:47.941 | INFO     | __main__:main:485 - Supabase connected. Jobs in DB: 50
+2026-06-17 03:30:48.061 | INFO     | __main__:main:494 - Loaded 50 hashes and 50 URLs for dedup

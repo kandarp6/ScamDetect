@@ -1,16 +1,5 @@
-"""
-supabase_client.py
-Database layer for Graphura - connects Python code to Supabase.
+#supabase_client.py
 
-Provides:
-    - Singleton Supabase client (get_client)
-    - upsert_company / upsert_recruiter / insert_job
-    - get_existing_job_hashes / get_job_count
-    - get_scam_distribution / delete_expired_jobs
-
-Usage:
-    from backend.scraper.storage.supabase_client import get_client, insert_job
-"""
 
 from typing import Optional
 from supabase import create_client, Client
@@ -18,9 +7,7 @@ from decouple import config
 from loguru import logger
 
 
-# ============================================================================
 # CLIENT INITIALIZATION
-# ============================================================================
 
 _SUPABASE_URL         = config("SUPABASE_URL",         default="")
 _SUPABASE_SERVICE_KEY = config("SUPABASE_SERVICE_KEY", default="")
@@ -44,9 +31,7 @@ def get_client() -> Client:
     return _sb
 
 
-# ============================================================================
 # COMPANY OPERATIONS
-# ============================================================================
 
 def upsert_company(
     name: str,
@@ -102,9 +87,7 @@ def upsert_company(
         return None
 
 
-# ============================================================================
 # RECRUITER OPERATIONS
-# ============================================================================
 
 def upsert_recruiter(
     name: str = "",
@@ -167,9 +150,7 @@ def upsert_recruiter(
         return None
 
 
-# ============================================================================
 # JOB OPERATIONS
-# ============================================================================
 
 def insert_job(job_data: dict) -> bool:
     """
@@ -273,9 +254,7 @@ def delete_expired_jobs() -> int:
         return 0
 
 
-# ============================================================================
 # ANALYTICS HELPERS
-# ============================================================================
 
 def get_scam_distribution() -> dict:
     """Return distribution of jobs by risk level."""
@@ -299,9 +278,7 @@ def get_scam_distribution() -> dict:
     return distribution
 
 
-# ============================================================================
 # SELF-TEST
-# ============================================================================
 
 def _self_test():
     print("=" * 70)

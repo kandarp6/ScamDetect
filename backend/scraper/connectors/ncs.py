@@ -1,16 +1,6 @@
-"""
-connectors/ncs.py
-National Career Service Portal (Government of India) scraper.
 
-URL: https://www.ncs.gov.in
+#connectors/ncs.py
 
-Notes:
-    - Government portal, fully public, no login required
-    - SPA with heavy JS rendering - needs longer timeouts
-    - Cross-referencing jobs here with other platforms is a strong
-      fraud signal (legit gov jobs should appear on NCS)
-    - All NCS jobs are tagged is_government=True for scoring
-"""
 
 import asyncio
 from typing import Optional
@@ -65,9 +55,7 @@ class NCSConnector(BaseConnector):
         "job_type":      ".job-type, .employment-type",
     }
 
-    # ------------------------------------------------------------------------
     # Search URL builder
-    # ------------------------------------------------------------------------
 
     def search_urls(self, keywords: list[str], location: str) -> list[str]:
         urls = []
@@ -78,9 +66,7 @@ class NCSConnector(BaseConnector):
             ))
         return urls
 
-    # ------------------------------------------------------------------------
     # Popup handling
-    # ------------------------------------------------------------------------
 
     async def handle_popups(self, page: Page) -> None:
         """Dismiss cookie banners and session warnings."""
@@ -95,9 +81,7 @@ class NCSConnector(BaseConnector):
         except Exception:
             pass
 
-    # ------------------------------------------------------------------------
     # Job link extraction
-    # ------------------------------------------------------------------------
 
     async def extract_job_links(self, page: Page) -> list[str]:
         if await self._is_error_page(page):
@@ -135,9 +119,7 @@ class NCSConnector(BaseConnector):
 
         return clean[: self.jobs_per_query]
 
-    # ------------------------------------------------------------------------
     # Job data extraction
-    # ------------------------------------------------------------------------
 
     async def extract_job_data(self, page: Page, url: str) -> Optional[RawJob]:
         if await self._is_error_page(page):
@@ -185,9 +167,7 @@ class NCSConnector(BaseConnector):
             }
         )
 
-    # ------------------------------------------------------------------------
     # Private helpers
-    # ------------------------------------------------------------------------
 
     async def _is_error_page(self, page: Page) -> bool:
         """Detect server errors, blocks, and session warnings."""

@@ -114,9 +114,7 @@ class InternshalaConnector(BaseConnector):
         "work_from_home": ["#work_from_home_icon", ".work_from_home_tag"],
     }
 
-    # ------------------------------------------------------------------------
     # Search URL builder
-    # ------------------------------------------------------------------------
 
     def search_urls(self, keywords: list[str], location: str) -> list[str]:
         result = []
@@ -125,9 +123,7 @@ class InternshalaConnector(BaseConnector):
             result.append(self.SEARCH_URL.format(keywords=slug))
         return result
 
-    # ------------------------------------------------------------------------
     # Popup handling
-    # ------------------------------------------------------------------------
 
     async def handle_popups(self, page: Page) -> None:
         await asyncio.sleep(0.5)
@@ -136,9 +132,7 @@ class InternshalaConnector(BaseConnector):
         except Exception:
             pass
 
-    # ------------------------------------------------------------------------
     # Job link extraction (from search results page)
-    # ------------------------------------------------------------------------
 
     async def extract_job_links(self, page: Page) -> list[str]:
         if await self._is_error_page(page):
@@ -178,9 +172,7 @@ class InternshalaConnector(BaseConnector):
 
         return clean[: self.jobs_per_query]
 
-    # ------------------------------------------------------------------------
     # Job data extraction (from job detail page)
-    # ------------------------------------------------------------------------
 
     async def extract_job_data(self, page: Page, url: str) -> Optional[RawJob]:
         await self.handle_popups(page)
@@ -241,9 +233,7 @@ class InternshalaConnector(BaseConnector):
             }
         )
 
-    # ------------------------------------------------------------------------
     # Private helpers
-    # ------------------------------------------------------------------------
 
     async def _is_error_page(self, page: Page) -> bool:
         """Detect if the loaded page is a server error or block page."""
@@ -274,14 +264,7 @@ class InternshalaConnector(BaseConnector):
         return False
 
     def _detect_mode(self, title: str, description: str, location: str) -> str:
-        """
-        Detect work mode using multiple signals:
-            1. Job title text (highest priority)
-            2. Description text
-            3. Location hints
-
-        Returns: Remote / Hybrid / On-site / Unknown
-        """
+        
         combined = f"{title} {description} {location}".lower()
 
         # Explicit remote signals

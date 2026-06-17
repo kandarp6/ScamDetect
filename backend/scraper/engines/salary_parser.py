@@ -1,23 +1,11 @@
-"""
-salary_parser.py
-Parse messy salary strings into structured numeric data.
+#salary_parser.py
 
-Handles formats like:
-    - "Rs 15-25 LPA"        -> {min: 1500000, max: 2500000, period: "year"}
-    - "20k-30k/month"       -> {min: 20000,   max: 30000,   period: "month"}
-    - "Earn 50k daily"      -> SUSPICIOUS flag
-    - "Best in industry"    -> {min: 0, max: 0, raw: "Best in industry"}
-
-All amounts are normalized to ANNUAL INR for ML / filtering.
-"""
 
 import re
 from dataclasses import dataclass, field
 
 
-# ============================================================================
 # DATA STRUCTURE
-# ============================================================================
 
 @dataclass
 class ParsedSalary:
@@ -32,9 +20,7 @@ class ParsedSalary:
     flags:         list  = field(default_factory=list)
 
 
-# ============================================================================
 # CONSTANTS
-# ============================================================================
 
 # Suspicious salary patterns (FRAUD signals)
 SUSPICIOUS_PATTERNS = [
@@ -115,9 +101,7 @@ PERIOD_MULTIPLIERS = {
 }
 
 
-# ============================================================================
 # MAIN PARSER
-# ============================================================================
 
 def parse_salary(raw: str) -> ParsedSalary:
     """
@@ -187,9 +171,7 @@ def parse_salary(raw: str) -> ParsedSalary:
     return result
 
 
-# ============================================================================
 # HELPER FUNCTIONS
-# ============================================================================
 
 def _detect_currency(text: str) -> str:
     """Return currency code from text. Default INR."""
@@ -265,9 +247,7 @@ def _extract_numbers(text: str, is_lpa: bool = False) -> list:
     return numbers
 
 
-# ============================================================================
 # DISPLAY HELPERS
-# ============================================================================
 
 def format_salary_inr(amount: float) -> str:
     """
@@ -308,9 +288,7 @@ def salary_summary(parsed: ParsedSalary) -> str:
     return f"{format_salary_inr(parsed.min_amount)} - {format_salary_inr(parsed.max_amount)}"
 
 
-# ============================================================================
 # SELF-TEST
-# ============================================================================
 
 def _self_test():
     print("=" * 70)

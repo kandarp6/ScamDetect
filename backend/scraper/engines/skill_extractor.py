@@ -1,31 +1,12 @@
-"""
-skill_extractor.py
-Extract structured skills from job titles and descriptions.
+#skill_extractor.py
 
-NLP techniques:
-    - Tokenization with regex word boundaries (prevents false positives)
-    - Case-insensitive matching
-    - Alias mapping (e.g. "JS" -> "JavaScript")
-    - Categorization (programming, frameworks, databases, etc.)
-    - Longest-alias-first matching for accuracy
-
-Output:
-    {
-        "skills":           ["Django", "PostgreSQL", "Python"],
-        "skill_count":      3,
-        "skill_categories": {"programming": ["Python"], ...}
-    }
-"""
 
 import re
 
 
-# ============================================================================
 # SKILL DICTIONARY (alias -> canonical name)
-# ============================================================================
 # Many skills have multiple names. Map all variations to ONE canonical name.
 # Critical for ML - otherwise "Python", "python", "py" become 3 features.
-# ============================================================================
 
 SKILL_DICT = {
     # Programming Languages
@@ -269,9 +250,7 @@ SKILL_DICT = {
 }
 
 
-# ============================================================================
 # SKILL CATEGORIES (for ML features and UI grouping)
-# ============================================================================
 
 CATEGORIES = {
     "programming": {
@@ -335,9 +314,7 @@ CATEGORIES = {
 }
 
 
-# ============================================================================
 # PRE-COMPUTED SORTED ALIASES (longest first for accuracy)
-# ============================================================================
 # Sort by length so "machine learning" matches before "ml" alone.
 
 _SORTED_SKILL_ALIASES = sorted(
@@ -347,9 +324,7 @@ _SORTED_SKILL_ALIASES = sorted(
 )
 
 
-# ============================================================================
 # MAIN FUNCTION
-# ============================================================================
 
 def extract_skills(title: str = "", description: str = "") -> dict:
     """
@@ -396,9 +371,7 @@ def extract_skills(title: str = "", description: str = "") -> dict:
     }
 
 
-# ============================================================================
 # UTILITY FUNCTIONS
-# ============================================================================
 
 def get_skill_category(skill: str) -> str:
     """Return the category of a single skill, or 'other' if unknown."""
@@ -427,9 +400,7 @@ def detect_skill_title_mismatch(title: str, skills: list) -> bool:
     return len(title_only) > 0
 
 
-# ============================================================================
 # SELF-TEST
-# ============================================================================
 
 def _self_test():
     print("=" * 70)

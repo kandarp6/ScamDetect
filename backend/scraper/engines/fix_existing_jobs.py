@@ -12,9 +12,7 @@ import time
 from ..storage.supabase_client import get_client
 
 
-# ============================================================================
 # RULES
-# ============================================================================
 
 REMOTE_KEYWORDS = [
     "work from home", "wfh", "remote", "anywhere",
@@ -41,9 +39,7 @@ NON_DATE_VALUES = {
 }
 
 
-# ============================================================================
 # HELPERS
-# ============================================================================
 
 def detect_mode_from_text(title: str, description: str, location: str) -> str:
     """Re-detect mode from job title + description + location."""
@@ -74,9 +70,7 @@ def is_real_date(text: str) -> bool:
     return any(re.search(p, text_lower) for p in DATE_PATTERNS)
 
 
-# ============================================================================
 # MAIN CLEANUP
-# ============================================================================
 
 def cleanup_jobs():
     print("=" * 70)

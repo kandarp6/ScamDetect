@@ -1,31 +1,12 @@
-"""
-deduplicator.py
-Prevent duplicate jobs from being saved to the database.
+#deduplicator.py
 
-The same job often appears on multiple platforms or with slightly different
-URLs. We generate a deterministic hash from (company + title + city + salary)
-to detect content-level duplicates regardless of source URL.
-
-Usage:
-    dedup = Deduplicator()
-    dedup.load_from_supabase(sb_client)
-
-    for job in scraped_jobs:
-        h = make_job_hash(job.company, job.title, job.city, job.salary)
-        if dedup.is_duplicate(h):
-            continue
-        save_job(job)
-        dedup.mark_seen(h)
-"""
 
 import hashlib
 import re
 from loguru import logger
 
 
-# ============================================================================
 # HASH GENERATION
-# ============================================================================
 
 def make_job_hash(
     company: str = "",
@@ -33,17 +14,7 @@ def make_job_hash(
     city: str = "",
     salary_raw: str = "",
 ) -> str:
-    """
-    Generate a deterministic SHA256 hash for a job posting.
-
-    Properties:
-        - Same inputs (case/whitespace-insensitive) -> same hash
-        - Different inputs -> different hash
-        - One-way (cannot be reversed)
-
-    Returns:
-        64-character hex string
-    """
+    
     def clean(s: str) -> str:
         """Normalize a string for consistent hashing."""
         if not s:
@@ -64,9 +35,7 @@ def make_job_hash(
     return hashlib.sha256(raw_string.encode('utf-8')).hexdigest()
 
 
-# ============================================================================
 # DEDUPLICATOR CLASS
-# ============================================================================
 
 class Deduplicator:
     """In-memory deduplication tracker for both content hashes and source URLs."""
@@ -81,9 +50,7 @@ class Deduplicator:
             "new_jobs":         0,
         }
 
-    # ------------------------------------------------------------------------
     # Loading from Supabase
-    # ------------------------------------------------------------------------
 
     def load_from_supabase(self, supabase_client) -> int:
         """
@@ -123,9 +90,7 @@ class Deduplicator:
             logger.warning(f"Could not load source URLs from Supabase: {e}")
             return 0
 
-    # ------------------------------------------------------------------------
     # Duplicate checking
-    # ------------------------------------------------------------------------
 
     def is_duplicate(self, job_hash: str) -> bool:
         """Check if a content hash already exists. O(1)."""
@@ -144,9 +109,7 @@ class Deduplicator:
             return True
         return False
 
-    # ------------------------------------------------------------------------
     # Mark as seen
-    # ------------------------------------------------------------------------
 
     def mark_seen(self, job_hash: str, url: str = "") -> None:
         """Add a content hash (and optionally a URL) to the seen set."""
@@ -164,9 +127,7 @@ class Deduplicator:
         """Remove a hash (e.g., when a job is deleted)."""
         self._seen_hashes.discard(job_hash)
 
-    # ------------------------------------------------------------------------
     # Stats
-    # ------------------------------------------------------------------------
 
     def count(self) -> int:
         """Total unique content hashes tracked."""
@@ -192,9 +153,7 @@ class Deduplicator:
         print(f"   URLs in cache:    {self.url_count()}")
 
 
-# ============================================================================
 # SELF-TEST
-# ============================================================================
 
 def _self_test():
     print("=" * 70)

@@ -1,13 +1,5 @@
-"""
-connectors/shine.py
-Shine.com scraper - HT Media's job portal, strong in India.
+#connectors/shine.py
 
-Notes:
-    - React-rendered pages need JS hydration wait
-    - Salary often a range (e.g. "3-6 LPA")
-    - Has experience + education fields not on LinkedIn/Internshala
-    - Recruiter contact sometimes in listing itself (fraud signal)
-"""
 
 import asyncio
 import re
@@ -61,9 +53,7 @@ class ShineConnector(BaseConnector):
         "company_size": "",   # Not available on Shine
     }
 
-    # ------------------------------------------------------------------------
     # Search URL builder
-    # ------------------------------------------------------------------------
 
     def search_urls(self, keywords: list[str], location: str) -> list[str]:
         urls = []
@@ -77,9 +67,7 @@ class ShineConnector(BaseConnector):
             urls.append(url)
         return urls
 
-    # ------------------------------------------------------------------------
     # Popup handling
-    # ------------------------------------------------------------------------
 
     async def handle_popups(self, page: Page) -> None:
         """Dismiss newsletter/signup modals."""
@@ -93,9 +81,7 @@ class ShineConnector(BaseConnector):
         except Exception:
             pass
 
-    # ------------------------------------------------------------------------
     # Job link extraction
-    # ------------------------------------------------------------------------
 
     async def extract_job_links(self, page: Page) -> list[str]:
         if await self._is_error_page(page):
@@ -135,9 +121,7 @@ class ShineConnector(BaseConnector):
 
         return clean[: self.jobs_per_query]
 
-    # ------------------------------------------------------------------------
     # Job data extraction
-    # ------------------------------------------------------------------------
 
     async def extract_job_data(self, page: Page, url: str) -> Optional[RawJob]:
         if await self._is_error_page(page):
@@ -189,9 +173,7 @@ class ShineConnector(BaseConnector):
             }
         )
 
-    # ------------------------------------------------------------------------
     # Private helpers
-    # ------------------------------------------------------------------------
 
     async def _is_error_page(self, page: Page) -> bool:
         """Detect server errors and block pages."""

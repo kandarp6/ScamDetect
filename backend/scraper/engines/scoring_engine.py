@@ -1,36 +1,12 @@
-"""
-scoring_engine.py
-Core fraud detection engine. Combines multiple signals to compute a 0-100
-fraud score with human-readable explanations.
+#scoring_engine.py
 
-Categories and weights:
-    Company trust       30%   - Is the company real?
-    Recruiter verify    25%   - Is the recruiter real?
-    Social media risk   20%   - WhatsApp/Telegram contacts?
-    Keyword risk        15%   - "Registration fee", "earn 50k daily"
-    Salary realism      10%   - Unrealistic earnings claims?
-
-Bonuses / penalties:
-    Government bonus           -20  (NCS / verified gov portals)
-    Skill-title mismatch       +15
-    Platform trust bonus       Per-platform table (see PLATFORM_TRUST_BONUS)
-
-Risk levels:
-    0-20    Safe
-    21-40   Low Risk
-    41-60   Medium Risk
-    61-80   High Risk
-    81-100  Scam Likely
-"""
 
 import re
 from dataclasses import dataclass, field
 from typing import Optional
 
 
-# ============================================================================
 # CONFIGURATION
-# ============================================================================
 
 WEIGHTS = {
     "company":   0.30,
@@ -53,9 +29,7 @@ PLATFORM_TRUST_BONUS = {
 }
 
 
-# ============================================================================
 # KNOWLEDGE BASES
-# ============================================================================
 
 PERSONAL_EMAIL_DOMAINS = {
     "gmail.com", "yahoo.com", "yahoo.in", "hotmail.com",
@@ -150,9 +124,7 @@ POSITIVE_KEYWORDS = [
 ]
 
 
-# ============================================================================
 # DATA STRUCTURE
-# ============================================================================
 
 @dataclass
 class ScoreBreakdown:
@@ -181,9 +153,7 @@ class ScoreBreakdown:
     platform_bonus_applied:   bool = False
 
 
-# ============================================================================
 # MAIN SCORING FUNCTION
-# ============================================================================
 
 def compute_fraud_score(
     job: dict,
@@ -193,17 +163,7 @@ def compute_fraud_score(
     skill_mismatch: bool = False,
     platform_name: str = "",
 ) -> ScoreBreakdown:
-    """
-    Compute the fraud score for a job posting.
 
-    Args:
-        job: Dict with job_description, salary_raw, email_domain, etc.
-        company_trust: 0-100 from company_trust.py
-        recruiter_verif: 0-100 from recruiter_verifier.py
-        is_government: True if from NCS or verified gov portal
-        skill_mismatch: True if title mentions skill not in skills list
-        platform_name: For platform-specific bonus
-    """
     b = ScoreBreakdown()
 
     desc                  = (job.get("job_description") or "").lower()
@@ -343,9 +303,7 @@ def compute_fraud_score(
     return b
 
 
-# ============================================================================
 # RISK LEVEL CLASSIFIER
-# ============================================================================
 
 def compute_risk_level(score: float) -> str:
     """Convert numeric score (0-100) to a categorical risk level."""
@@ -361,9 +319,7 @@ def compute_risk_level(score: float) -> str:
         return "Scam Likely"
 
 
-# ============================================================================
 # HUMAN-READABLE REPORT
-# ============================================================================
 
 def format_score_report(breakdown: ScoreBreakdown) -> str:
     """Format ScoreBreakdown as a readable text report."""
@@ -411,9 +367,7 @@ def format_score_report(breakdown: ScoreBreakdown) -> str:
     return "\n".join(report)
 
 
-# ============================================================================
 # SELF-TEST
-# ============================================================================
 
 def _self_test():
     print("=" * 70)

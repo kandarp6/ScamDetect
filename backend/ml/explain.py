@@ -1,17 +1,5 @@
-"""
-explain.py
-SHAP-based explanations for ML predictions.
+#explain.py
 
-Tells users WHY the model predicted scam/safe by showing each feature's
-contribution to the final score.
-
-Usage:
-    python -m backend.ml.explain
-
-    # Programmatically:
-    from backend.ml.explain import explain_prediction
-    explanation = explain_prediction(job_dict)
-"""
 
 import json
 import joblib
@@ -28,9 +16,7 @@ from .feature_extractor import build_feature_dataframe
 from .predict import load_models
 
 
-# ============================================================================
 # CONFIGURATION
-# ============================================================================
 
 MODELS_DIR = Path(__file__).parent / "models"
 
@@ -82,9 +68,7 @@ FEATURE_DESCRIPTIONS = {
 }
 
 
-# ============================================================================
 # DATA STRUCTURE
-# ============================================================================
 
 @dataclass
 class SHAPExplanation:
@@ -97,9 +81,7 @@ class SHAPExplanation:
     all_contributions: list = field(default_factory=list)
 
 
-# ============================================================================
 # SHAP EXPLAINER (Cached singleton)
-# ============================================================================
 
 _explainer_cache = {
     "loaded": False,
@@ -126,9 +108,7 @@ def get_shap_explainer():
     return _explainer_cache
 
 
-# ============================================================================
 # MAIN EXPLANATION FUNCTION
-# ============================================================================
 
 def explain_prediction(
     job: dict,
@@ -221,9 +201,7 @@ def explain_prediction(
     )
 
 
-# ============================================================================
 # DISPLAY FUNCTIONS
-# ============================================================================
 
 def _humanize_feature(name: str) -> str:
     """Convert feature name to readable description."""
@@ -309,9 +287,7 @@ def generate_user_friendly_explanation(explanation: SHAPExplanation) -> dict:
     return result
 
 
-# ============================================================================
 # SELF-TEST
-# ============================================================================
 
 def main():
     print("=" * 70)

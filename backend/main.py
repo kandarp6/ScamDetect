@@ -10,6 +10,18 @@ API docs:
 """
 
 import os
+import sys
+
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = r"C:\pw-browsers"
+
+_venv_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_pw_driver = os.path.join(
+    _venv_root,
+    "venv", "Lib", "site-packages", "playwright", "driver", "playwright.cmd"
+)
+if os.path.exists(_pw_driver):
+    os.environ["PLAYWRIGHT_CLI_TARGET_PATH"] = _pw_driver
+
 import traceback
 import hashlib
 import re
@@ -31,23 +43,14 @@ from backend.scraper.storage.supabase_client import (
     get_existing_job_hashes,
 )
 from backend.scraper.engines.url_scraper import scrape_job_url
+from playwright_stealth import stealth_async
 
-
-
-# ============================================================================
-# APP SETUP
-# ============================================================================
 
 app = FastAPI(
     title="Fake Internship and Scam Job Detection API",
     description="AI-powered fraud detection for Indian job market",
     version="1.0.0",
 )
-
-
-# ============================================================================
-# CORS
-# ============================================================================
 
 app.add_middleware(
     CORSMiddleware,
@@ -59,17 +62,12 @@ app.add_middleware(
         "http://localhost:8080",
         "http://127.0.0.1:8080",
     ],
-    allow_origin_regex="https://.*\\.vercel\\.app",
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-
-# ============================================================================
-# REQUEST MODELS
-# ============================================================================
 
 class JobAnalysisRequest(BaseModel):
     job_title: Optional[str] = ""
@@ -99,9 +97,11 @@ class ReportRequest(BaseModel):
     contact: Optional[str] = ""
 
 
-# ============================================================================
-# ROUTES
-# ============================================================================
+class ScrapeRequest(BaseModel):
+    platform: str
+    keywords: str
+    limit: Optional[int] = 3
+
 
 @app.get("/api")
 async def api_root():
@@ -111,7 +111,6 @@ async def api_root():
         "version": "1.0.0",
         "docs": "/docs",
     }
-
 
 
 @app.get("/health")
@@ -125,6 +124,7 @@ async def health():
     return {
         "status": "healthy",
         "database": "connected" if db_ok else "disconnected",
+        "playwright_browsers_path": os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "NOT SET"),
     }
 
 
@@ -133,7 +133,6 @@ async def analyze_job(job: JobAnalysisRequest):
     try:
         job_dict = job.dict()
         prediction = predict_job(job_dict)
-
         return {
             "score": prediction.ensemble_score,
             "risk_level": prediction.risk_level,
@@ -160,6 +159,7 @@ async def analyze_job(job: JobAnalysisRequest):
 async def analyze_url(req: UrlRequest):
     try:
         scraped_data = await scrape_job_url(req.url)
+
         if scraped_data.get("job_title") == "Scrape Failed":
             return {
                 "score": 50,
@@ -181,7 +181,7 @@ async def analyze_url(req: UrlRequest):
                 }],
                 "explanation": scraped_data.get("job_description"),
             }
-            
+
         prediction = predict_job(scraped_data)
         return {
             "score": prediction.ensemble_score,
@@ -267,16 +267,18 @@ async def submit_report(report: ReportRequest):
             reason += f" Contact: {report.contact}."
         if report.experience:
             reason += f" Experience: {report.experience}."
-            
+
         data = {
             "reason": reason,
             "description": report.job_description,
             "evidence_url": report.job_url or "",
             "reporter_name": "Community Member",
-            "reporter_email_hash": "sha256:" + hashlib.sha256(b"anonymous@graphura.org").hexdigest()[:16]
+            "reporter_email_hash": (
+                "sha256:" + hashlib.sha256(b"anonymous@graphura.org").hexdigest()[:16]
+            ),
         }
         sb.table("scam_reports").insert(data).execute()
-        
+
         return {
             "status": "received",
             "message": "Thank you for the report.",
@@ -286,39 +288,40 @@ async def submit_report(report: ReportRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-class ScrapeRequest(BaseModel):
-    platform: str
-    keywords: str
-    limit: Optional[int] = 3
-
-
 @app.post("/api/scrape")
 async def scrape_jobs_endpoint(req: ScrapeRequest):
     try:
+        from playwright.async_api import async_playwright
         from backend.scraper.connectors import CONNECTOR_REGISTRY
         from backend.scraper.engines.deduplicator import Deduplicator
         from backend.scraper.main import process_single_job, USER_AGENTS, VIEWPORT_POOL
-        
+        from backend.scraper.engines.location_normalizer import normalize_location
+        from backend.scraper.engines.salary_parser import parse_salary
+        from backend.scraper.engines.company_trust import compute_company_trust
+        from backend.scraper.engines.scoring_engine import compute_fraud_score
+
         platform_key = req.platform.lower().strip()
         if platform_key not in CONNECTOR_REGISTRY:
-            raise HTTPException(status_code=400, detail=f"Unsupported platform: {req.platform}")
-            
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported platform: {req.platform}",
+            )
+
         connector_class = CONNECTOR_REGISTRY[platform_key]
         connector = connector_class({})
-        
+
         sb_client = get_client()
         deduplicator = Deduplicator()
         deduplicator.load_from_supabase(sb_client)
         deduplicator.load_urls_from_supabase(sb_client)
 
-        
         scraped_results = []
-        
-        from playwright.async_api import async_playwright
+        stats = {"saved": 0, "skipped": 0, "failed": 0, "high_risk": 0}
+
         async with async_playwright() as p:
             browser = await p.chromium.launch(
                 headless=True,
-                args=["--no-sandbox", "--disable-dev-shm-usage"]
+                args=["--no-sandbox", "--disable-dev-shm-usage"],
             )
             context = await browser.new_context(
                 user_agent=random.choice(USER_AGENTS),
@@ -326,90 +329,115 @@ async def scrape_jobs_endpoint(req: ScrapeRequest):
                 locale="en-IN",
                 timezone_id="Asia/Kolkata",
             )
-            
+
             try:
                 search_page = await context.new_page()
-                await Stealth().apply_stealth_async(search_page)
+                await stealth_async(search_page)
                 search_urls = connector.search_urls([req.keywords], "India")
-                
+
                 job_urls = []
                 if search_urls:
-                    await search_page.goto(search_urls[0], wait_until="domcontentloaded", timeout=30000)
+                    await search_page.goto(
+                        search_urls[0],
+                        wait_until="domcontentloaded",
+                        timeout=30_000,
+                    )
                     await asyncio.sleep(2)
                     job_urls = await connector.extract_job_links(search_page)
-                    
+
                 await search_page.close()
-                
-                # Deduplicate and limit
-                job_urls = list(dict.fromkeys(job_urls))[:req.limit]
-                stats = {"saved": 0, "skipped": 0, "failed": 0, "high_risk": 0}
-                
+
+                job_urls = list(dict.fromkeys(job_urls))[: req.limit]
+
                 for url in job_urls:
                     job_page = await context.new_page()
                     try:
-                        await Stealth().apply_stealth_async(job_page)
-                        await job_page.goto(url, wait_until="domcontentloaded", timeout=25000)
+                        await stealth_async(job_page)
+                        await job_page.goto(
+                            url,
+                            wait_until="domcontentloaded",
+                            timeout=25_000,
+                        )
                         await asyncio.sleep(2)
-                        
+
                         raw_job = await connector.extract_job_data(job_page, url)
-                        if raw_job:
-                            await process_single_job(raw_job, connector, deduplicator, stats)
-                            
-                            from backend.scraper.engines.location_normalizer import normalize_location
-                            from backend.scraper.engines.salary_parser import parse_salary
-                            from backend.scraper.engines.company_trust import compute_company_trust
-                            from backend.scraper.engines.scoring_engine import compute_fraud_score
-                            
-                            loc = normalize_location(raw_job.location or "")
-                            sal = parse_salary(raw_job.salary or "")
-                            co_intel = compute_company_trust(raw_job.company_name or "", 0, False)
-                            
-                            email = ""
-                            if raw_job.job_description:
-                                match = re.search(r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}', raw_job.job_description)
-                                email = match.group() if match else ""
-                                
-                            email_dom = email.split("@", 1)[1].lower().strip() if "@" in email else ""
-                            rec_score, _ = verify_recruiter(raw_job.recruiter_name or "", "", email_dom, "", co_intel.domain)
-                            
-                            scoring = compute_fraud_score(
-                                job={
-                                    "job_description": raw_job.job_description or "",
-                                    "salary_raw": raw_job.salary or "",
-                                    "email_domain": email_dom,
-                                    "is_suspicious_salary": sal.is_suspicious,
-                                },
-                                company_trust=co_intel.trust_score,
-                                recruiter_verif=rec_score,
-                                is_government=False,
-                                skill_mismatch=False,
-                                platform_name=connector.platform_name
+                        if not raw_job:
+                            continue
+
+                        await process_single_job(raw_job, connector, deduplicator, stats)
+
+                        loc = normalize_location(raw_job.location or "")
+                        sal = parse_salary(raw_job.salary or "")
+                        co_intel = compute_company_trust(raw_job.company_name or "", 0, False)
+
+                        email = ""
+                        if raw_job.job_description:
+                            m = re.search(
+                                r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}",
+                                raw_job.job_description,
                             )
-                            
-                            scraped_results.append({
-                                "job_title": raw_job.job_title or "Unknown Title",
-                                "company_name": raw_job.company_name or "Unknown Company",
-                                "platform_name": connector.platform_name,
-                                "scam_score": scoring.total_score,
-                                "scam_risk_level": scoring.risk_level,
-                                "source_url": url,
-                                "city": loc.city
-                            })
+                            email = m.group() if m else ""
+
+                        email_dom = (
+                            email.split("@", 1)[1].lower().strip() if "@" in email else ""
+                        )
+                        rec_score, _ = verify_recruiter(
+                            raw_job.recruiter_name or "",
+                            "",
+                            email_dom,
+                            "",
+                            co_intel.domain,
+                        )
+
+                        scoring = compute_fraud_score(
+                            job={
+                                "job_description": raw_job.job_description or "",
+                                "salary_raw": raw_job.salary or "",
+                                "email_domain": email_dom,
+                                "is_suspicious_salary": sal.is_suspicious,
+                            },
+                            company_trust=co_intel.trust_score,
+                            recruiter_verif=rec_score,
+                            is_government=False,
+                            skill_mismatch=False,
+                            platform_name=connector.platform_name,
+                        )
+
+                        scraped_results.append({
+                            "job_title": raw_job.job_title or "Unknown Title",
+                            "company_name": raw_job.company_name or "Unknown Company",
+                            "platform_name": connector.platform_name,
+                            "scam_score": scoring.total_score,
+                            "scam_risk_level": scoring.risk_level,
+                            "source_url": url,
+                            "city": loc.city,
+                        })
+
                     except Exception as inner_e:
-                        print(f"Failed to scrape single job {url}: {inner_e}")
+                        stats["failed"] += 1
+                        print(f"Failed on {url}: {inner_e}")
                     finally:
                         await job_page.close()
+
+            except HTTPException:
+                raise
             except Exception as e:
                 traceback.print_exc()
-                raise HTTPException(status_code=500, detail=f"Scraping logic failed: {str(e)}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Scraping logic failed: {str(e)}",
+                )
             finally:
                 await browser.close()
-                
+
         return {
             "status": "completed",
             "results": scraped_results,
-            "stats": stats
+            "stats": stats,
         }
+
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -420,14 +448,18 @@ async def get_stats():
     try:
         sb = get_client()
         total = get_job_count()
-        scams = sb.table("jobs").select("id", count="exact").in_(
-            "scam_risk_level", ["High Risk", "Scam Likely"]
-        ).execute()
-
-        recruiters = sb.table("recruiters").select("id", count="exact").gte(
-            "recruiter_verification_score", 60
-        ).execute()
-
+        scams = (
+            sb.table("jobs")
+            .select("id", count="exact")
+            .in_("scam_risk_level", ["High Risk", "Scam Likely"])
+            .execute()
+        )
+        recruiters = (
+            sb.table("recruiters")
+            .select("id", count="exact")
+            .gte("recruiter_verification_score", 60)
+            .execute()
+        )
         reports = sb.table("scam_reports").select("id", count="exact").execute()
 
         return {
@@ -444,7 +476,6 @@ async def get_stats():
             "verified_recruiters": 0,
             "reports_filed": 0,
         }
-
 
 
 @app.get("/api/jobs/recent")
@@ -470,7 +501,10 @@ async def get_all_jobs(limit: int = 50):
         sb = get_client()
         response = (
             sb.table("jobs")
-            .select("*, companies(name, company_trust_score), recruiters(name, recruiter_verification_score)")
+            .select(
+                "*, companies(name, company_trust_score), "
+                "recruiters(name, recruiter_verification_score)"
+            )
             .order("created_at", desc=True)
             .limit(limit)
             .execute()
@@ -480,11 +514,6 @@ async def get_all_jobs(limit: int = 50):
         print(f"Get all jobs error: {e}")
         return {"jobs": []}
 
-
-
-# ============================================================================
-# HELPERS
-# ============================================================================
 
 def _get_summary(risk_level: str) -> str:
     summaries = {
@@ -500,15 +529,15 @@ def _get_summary(risk_level: str) -> str:
 def _company_risk(job: dict) -> float:
     company = (job.get("company_name") or "").lower()
     if not company:
-        return 60
+        return 60.0
     if "solutions" in company or "consultancy" in company:
-        return 75
-    return 25
+        return 75.0
+    return 25.0
 
 
 def _contact_risk(job: dict) -> float:
     desc = (job.get("job_description") or "").lower()
-    risk = 0
+    risk = 0.0
     if "whatsapp" in desc:
         risk += 40
     if "telegram" in desc:
@@ -517,18 +546,18 @@ def _contact_risk(job: dict) -> float:
         risk += 20
     if "registration fee" in desc:
         risk += 30
-    return min(risk, 100)
+    return min(risk, 100.0)
 
 
 def _extract_keywords(prediction) -> list:
     keywords = []
-    for f in (prediction.top_risk_features or []):
+    for f in prediction.top_risk_features or []:
         keywords.append({
             "keyword": f.get("feature", "unknown"),
             "is_red_flag": True,
             "explanation": "Risk signal detected.",
         })
-    for f in (prediction.top_safe_features or []):
+    for f in prediction.top_safe_features or []:
         keywords.append({
             "keyword": f.get("feature", "unknown"),
             "is_red_flag": False,
@@ -566,11 +595,6 @@ def _build_explanation(prediction) -> str:
     return f"Score: <strong>{score}/100</strong> - No major issues found."
 
 
-# ============================================================================
-# ENTRY POINT
-# ============================================================================
-
-# Serve static files for frontend after API routes
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 
 

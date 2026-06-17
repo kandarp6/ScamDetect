@@ -4,6 +4,7 @@ Integration tests for Graphura FastAPI endpoints.
 """
 
 import unittest
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 from backend.main import app
 
@@ -73,6 +74,35 @@ class TestApi(unittest.TestCase):
         response = self.client.post("/api/report", json=payload)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "received")
+
+    @patch('backend.main.scrape_job_url')
+    def test_analyze_url_endpoint(self, mock_scrape):
+        mock_scrape.return_value = {
+            "job_title": "Mocked Job Title",
+            "job_description": "We are looking for a python developer with 3 years of experience. Working with fastapis.",
+            "company_name": "Google",
+            "platform_name": "LinkedIn",
+            "salary_raw": "$100,000/year",
+            "city": "San Francisco"
+        }
+        payload = {"url": "https://example.com/fake-job-post-not-exist"}
+        response = self.client.post("/api/analyze/url", json=payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("score", data)
+        self.assertIn("risk_level", data)
+
+    def test_recent_jobs_endpoint(self):
+        response = self.client.get("/api/jobs/recent?limit=3")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("jobs", data)
+
+    def test_all_jobs_endpoint(self):
+        response = self.client.get("/api/jobs")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("jobs", data)
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,16 +1,5 @@
-"""
-feature_extractor.py
-Convert scraped jobs into ML-ready numerical features.
+#feature_extractor.py
 
-Outputs ~146 features per job:
-    - Numeric metrics (description length, salary, skill count, etc.)
-    - Boolean flags (has_email, has_whatsapp, has_registration_fee, etc.)
-    - Skill category counts
-    - TF-IDF text features (top 100 keywords)
-
-Usage:
-    python -m backend.ml.feature_extractor
-"""
 
 import re
 import numpy as np
@@ -23,9 +12,7 @@ from pathlib import Path
 from .nlp_engine import prepare_ml_text
 
 
-# ============================================================================
 # CONSTANTS
-# ============================================================================
 
 FRAUD_KEYWORDS = [
     "registration fee", "training fee", "joining fee", "deposit",
@@ -51,9 +38,7 @@ TFIDF_PATH = MODELS_DIR / "tfidf_vectorizer.pkl"
 VERBOSE = False
 
 
-# ============================================================================
 # NUMERIC FEATURE EXTRACTION
-# ============================================================================
 
 def extract_numeric_features(job: dict) -> dict:
     """Extract numeric and boolean features from a single job."""
@@ -155,9 +140,7 @@ def extract_numeric_features(job: dict) -> dict:
     return features
 
 
-# ============================================================================
 # TF-IDF TEXT FEATURES
-# ============================================================================
 
 def fit_tfidf_vectorizer(descriptions: list, max_features: int = 100) -> TfidfVectorizer:
     """
@@ -202,9 +185,7 @@ def get_tfidf_features(descriptions: list, vectorizer: TfidfVectorizer = None) -
     return pd.DataFrame(tfidf_matrix.toarray(), columns=feature_names)
 
 
-# ============================================================================
 # MAIN PIPELINE
-# ============================================================================
 
 def build_feature_dataframe(jobs: list, fit_tfidf: bool = True) -> pd.DataFrame:
     """
@@ -261,9 +242,7 @@ def build_feature_dataframe(jobs: list, fit_tfidf: bool = True) -> pd.DataFrame:
     return df_combined
 
 
-# ============================================================================
 # LABEL EXTRACTION
-# ============================================================================
 
 def extract_labels(jobs: list) -> pd.DataFrame:
     """
@@ -289,9 +268,7 @@ def extract_labels(jobs: list) -> pd.DataFrame:
     return pd.DataFrame(labels)
 
 
-# ============================================================================
 # SELF-TEST
-# ============================================================================
 
 def _self_test():
     """Run feature extraction on real Supabase data (or demo data)."""

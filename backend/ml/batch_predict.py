@@ -1,10 +1,5 @@
-"""
-batch_predict.py
-Score every job in the Supabase database and save ML predictions back to DB.
+#batch_predict.py
 
-Usage:
-    python -m backend.ml.batch_predict
-"""
 
 import time
 from .predict import predict_job, load_models

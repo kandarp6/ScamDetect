@@ -1,20 +1,4 @@
-"""
-main.py
-Master orchestrator for Graphura's job scraper.
-
-Pipeline per job:
-    1. location_normalizer  -> Clean city/state
-    2. skill_extractor      -> Extract skills from text
-    3. salary_parser        -> Parse messy salary strings
-    4. scoring_engine       -> Compute fraud score
-    5. company_trust        -> Score company trust
-    6. recruiter_verifier   -> Verify recruiter identity
-    7. deduplicator         -> Prevent duplicates (hash + URL)
-    8. supabase_client      -> Save to cloud database
-
-Usage:
-    python -m backend.scraper.main
-"""
+#main.py
 
 import asyncio
 import hashlib
@@ -27,7 +11,7 @@ from pathlib import Path
 from decouple import config as env
 from loguru import logger
 from playwright.async_api import async_playwright
-from playwright_stealth import Stealth
+from playwright_stealth import stealth_async
 
 from .connectors import CONNECTOR_REGISTRY
 from .connectors.base import BaseConnector
@@ -54,9 +38,7 @@ from .storage.supabase_client import (
 )
 
 
-# ============================================================================
 # CONFIGURATION
-# ============================================================================
 
 HEADLESS_MODE     = env("HEADLESS_MODE", default="True").lower() == "true"
 JOBS_PER_QUERY    = int(env("JOBS_PER_QUERY", default=25))
@@ -110,9 +92,7 @@ ERROR_PAGE_INDICATORS = [
 ]
 
 
-# ============================================================================
 # UTILITIES
-# ============================================================================
 
 def hash_email(email: str) -> str:
     """Convert email to SHA256 hash for GDPR compliance."""
@@ -157,9 +137,7 @@ def is_error_page(raw_job) -> bool:
     return False
 
 
-# ============================================================================
 # JOB PROCESSING
-# ============================================================================
 
 async def process_single_job(
     raw_job,
@@ -325,9 +303,7 @@ async def process_single_job(
         return False
 
 
-# ============================================================================
 # PLATFORM SCRAPING
-# ============================================================================
 
 async def scrape_platform(
     connector: BaseConnector,
@@ -374,7 +350,7 @@ async def scrape_platform(
     try:
         # Warm-up
         warmup = await context.new_page()
-        await Stealth().apply_stealth_async(warmup)
+        await stealth_async(warmup)
         await connector.pre_search_hook(warmup)
         await warmup.close()
 
@@ -387,7 +363,7 @@ async def scrape_platform(
 
             search_page = await context.new_page()
             try:
-                await Stealth().apply_stealth_async(search_page)
+                await stealth_async(search_page)
                 await search_page.goto(
                     search_url,
                     wait_until="domcontentloaded",
@@ -425,7 +401,7 @@ async def scrape_platform(
         for i, url in enumerate(unique_urls, 1):
             job_page = await context.new_page()
             try:
-                await Stealth().apply_stealth_async(job_page)
+                await stealth_async(job_page)
                 await job_page.goto(
                     url,
                     wait_until="domcontentloaded",
@@ -460,9 +436,7 @@ async def scrape_platform(
     return stats
 
 
-# ============================================================================
 # MAIN ORCHESTRATOR
-# ============================================================================
 
 async def main():
     """Run the entire scrape pipeline."""
@@ -571,9 +545,7 @@ async def main():
     logger.info("=" * 70)
 
 
-# ============================================================================
 # ENTRY POINT
-# ============================================================================
 
 if __name__ == "__main__":
     asyncio.run(main())

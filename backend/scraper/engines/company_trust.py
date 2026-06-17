@@ -1,24 +1,12 @@
-"""
-company_trust.py
-Compute company_trust_score (0-100) using publicly available signals.
+#company_trust.py
 
-Signals used (all free-tier):
-    - DNS lookup (Python's socket module)
-    - Known Indian/global company allowlist
-    - Name pattern analysis (generic vs proper)
-    - Optional: LinkedIn presence, employee count
-
-Score range: 0 (no trust) -> 100 (highly trusted)
-"""
 
 import re
 import socket
 from dataclasses import dataclass, field
 
 
-# ============================================================================
 # DATA STRUCTURE
-# ============================================================================
 
 @dataclass
 class CompanyIntelligence:
@@ -33,9 +21,7 @@ class CompanyIntelligence:
     })
 
 
-# ============================================================================
 # KNOWN INDIAN AND GLOBAL COMPANIES (Auto-trust)
-# ============================================================================
 
 KNOWN_DOMAINS = {
     # IT Giants
@@ -133,9 +119,7 @@ KNOWN_DOMAINS = {
 }
 
 
-# ============================================================================
 # GENERIC NAME PATTERNS (red flag - anyone can use these)
-# ============================================================================
 
 GENERIC_NAME_PATTERNS = [
     r'\bit\s+solutions?',
@@ -156,9 +140,7 @@ LEGAL_SUFFIXES = [
 ]
 
 
-# ============================================================================
 # MAIN COMPUTE FUNCTION
-# ============================================================================
 
 def compute_company_trust(
     company_name: str,
@@ -266,9 +248,7 @@ def compute_company_trust(
     return intel
 
 
-# ============================================================================
 # HELPER FUNCTIONS
-# ============================================================================
 
 def _derive_domain(name_lower: str) -> str:
     """
@@ -312,9 +292,7 @@ def _is_generic_name(name_lower: str) -> bool:
     return any(re.search(p, name_lower) for p in GENERIC_NAME_PATTERNS)
 
 
-# ============================================================================
 # SELF-TEST
-# ============================================================================
 
 def _self_test():
     """Run a quick test of the trust scoring. Requires internet for DNS."""

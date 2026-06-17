@@ -6,9 +6,7 @@ Author: Graphura India Pvt Ltd
 ==========================================================
 """
 
-# ===========================
 # IMPORTS
-# ===========================
 
 import re
 import nltk
@@ -16,12 +14,10 @@ from typing import List
 
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
+from nltk.stem import PorterStemmer
 
 
-# ===========================
 # DOWNLOAD NLTK DATA
-# ===========================
 
 try:
     nltk.data.find("tokenizers/punkt")
@@ -38,25 +34,18 @@ try:
 except:
     nltk.download("stopwords")
 
-try:
-    nltk.data.find("corpora/wordnet")
-except:
-    nltk.download("wordnet")
 
 
-# ===========================
+
 # INITIALIZE NLP OBJECTS
-# ===========================
 
-lemmatizer = WordNetLemmatizer()
+stemmer = PorterStemmer()
 
 STOP_WORDS = set(stopwords.words("english"))
 
 
-# ===========================
 # SCAM KEYWORD DATABASE
 # Weight : 0 - 100
-# ===========================
 
 SCAM_KEYWORDS = {
 
@@ -104,10 +93,8 @@ SCAM_KEYWORDS = {
 }
 
 
-# ===========================
 # SYNONYM DATABASE
 # Used before keyword matching
-# ===========================
 
 SCAM_SYNONYMS = {
     
@@ -170,9 +157,7 @@ SCAM_SYNONYMS = {
 
 }
 
-# ===========================
 # TEXT PREPROCESSING
-# ===========================
 
 def preprocess_text(text: str) -> str:
     """
@@ -224,16 +209,14 @@ def preprocess_text(text: str) -> str:
 
         if token not in STOP_WORDS:
 
-            token = lemmatizer.lemmatize(token)
+            token = stemmer.stem(token)
 
             cleaned_tokens.append(token)
 
     cleaned_text = " ".join(cleaned_tokens)
 
     return cleaned_text
-# ==========================================================
 # REPLACE SYNONYMS
-# ==========================================================
 
 def replace_synonyms(text: str) -> str:
     """
@@ -257,9 +240,7 @@ def replace_synonyms(text: str) -> str:
     return updated_text
 
 
-# ==========================================================
 # GENERATE N-GRAMS
-# ==========================================================
 
 def generate_ngrams(tokens, n=2):
     """
@@ -282,18 +263,14 @@ def generate_ngrams(tokens, n=2):
     ]
 
 
-# ==========================================================
 # KEYWORD ANALYSIS
-# ==========================================================
 
 def keyword_analysis(text: str):
     """
     Detect fraud keywords and calculate keyword score.
     """
 
-    # -------------------------
     # preprocess
-    # -------------------------
 
     clean_text = preprocess_text(text)
 
@@ -325,9 +302,7 @@ def keyword_analysis(text: str):
 
     matched_scores = []
 
-    # -------------------------
     # keyword matching
-    # -------------------------
 
     for keyword, score in SCAM_KEYWORDS.items():
 
@@ -337,9 +312,7 @@ def keyword_analysis(text: str):
 
             matched_scores.append(score)
 
-    # -------------------------
     # keyword score
-    # -------------------------
 
     if len(matched_scores) == 0:
         keyword_score = 0
@@ -358,9 +331,7 @@ def keyword_analysis(text: str):
     }
 
 
-# ==========================================================
 # SIMPLE HELPER FUNCTIONS
-# ==========================================================
 
 def get_keyword_score(text: str):
     """
@@ -386,9 +357,7 @@ def get_clean_text(text: str):
     return result["clean_text"]
 
 
-# ==========================================================
 # NEW INTEGRATED HELPERS
-# ==========================================================
 
 def prepare_ml_text(text: str) -> str:
     """

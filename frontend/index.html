@@ -218,10 +218,7 @@ select.input{cursor:pointer;appearance:none;padding-right:32px}
       <svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
       Report
     </div>
-    <div class="ntab" data-page="livescraper" onclick="showPage('livescraper',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-      Live Scraper
-    </div>
+
     <div class="ntab" data-page="dash" onclick="showPage('dash',this)">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Dashboard
@@ -535,72 +532,7 @@ select.input{cursor:pointer;appearance:none;padding-right:32px}
 </div>
 
 
-<!-- LIVE SCRAPER -->
-<div class="page" id="p-livescraper">
-  <div class="g2" style="align-items:start">
-    <div class="card">
-      <div class="sec-title mb16">Trigger Live Job Scraper</div>
-      <p style="font-size:13px;color:var(--ink-2);margin-bottom:16px">
-        Scrape jobs live from target platforms (using Playwright), run fraud scoring, and view the metrics in real time.
-      </p>
-      
-      <label class="lbl">Search Keywords *</label>
-      <input class="input mb12" id="scrape-keywords" type="text" placeholder="e.g. software engineer, data entry">
-      
-      <label class="lbl">Platform</label>
-      <select class="input mb12" id="scrape-platform">
-        <option value="internshala">Internshala</option>
-        <option value="ncs">National Career Service (NCS)</option>
-        <option value="shine">Shine</option>
-      </select>
-      
-      <label class="lbl">Limit (Number of jobs)</label>
-      <select class="input mb16" id="scrape-limit">
-        <option value="3">3 Jobs</option>
-        <option value="5">5 Jobs</option>
-        <option value="10">10 Jobs</option>
-      </select>
-      
-      <button class="btn btn-primary btn-full" id="btn-start-scrape" onclick="runLiveScraper()">
-        <i class="fas fa-play"></i> Start Live Scraper
-      </button>
-    </div>
-    
-    <div class="card" id="scrape-status" style="display:none;text-align:center;padding:40px">
-      <div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:12px">Scraper Running...</div>
-      <div style="font-size:13px;color:var(--ink-3);margin-bottom:20px">Playwright is browsing and extracting job posts. This may take up to a minute.</div>
-      <div class="dots" style="text-align:center"><span></span><span></span><span></span></div>
-    </div>
 
-    <div class="card" id="scrape-empty" style="text-align:center;padding:56px 28px">
-      <i class="fas fa-search-dollar" style="font-size:40px;color:var(--ink-3);margin-bottom:14px"></i>
-      <div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px">No live scraping done yet</div>
-      <div style="font-size:13px;color:var(--ink-3)">Select parameters and click <strong>Start Live Scraper</strong> to scrape and score jobs.</div>
-    </div>
-  </div>
-
-  <div class="card" id="scrape-results-card" style="display:none;margin-top:16px">
-    <div class="sec-title mb12">Scraping Results</div>
-    <div style="overflow-x:auto">
-      <table class="dtable" id="scrape-results-table">
-        <thead>
-          <tr>
-            <th>Job Title</th>
-            <th>Company</th>
-            <th>Platform</th>
-            <th>Location</th>
-            <th>Scam Score</th>
-            <th>Risk Level</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="scrape-results-body">
-          <!-- Dynamically filled -->
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
 
 
 <!-- DASHBOARD -->

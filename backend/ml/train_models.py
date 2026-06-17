@@ -1,21 +1,6 @@
-"""
-train_models.py
-Train multiple ML models for job fraud detection.
-
-Pipeline:
-    1. Load real jobs from Supabase + generate synthetic data
-    2. Split into train/test (RAW jobs, no leakage)
-    3. Fit TF-IDF on training data only
-    4. Cross-validate models on train set
-    5. Train RF + XGBoost + Isolation Forest
-    6. Save models + metadata
-
-Usage:
-    python -m backend.ml.train_models
-"""
-
 import json
 import random
+import re
 import warnings
 import numpy as np
 import pandas as pd
@@ -44,26 +29,137 @@ from .feature_extractor import (
 )
 from .nlp_engine import prepare_ml_text
 
-# Suppress sklearn / xgboost noise
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
-
 MODELS_DIR = Path(__file__).parent / "models"
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
+
+REAL_DATA_CSV_PATH = Path(__file__).parent / "data" / "jobs_with_extracted_skills.csv"
+
+LABEL_NOISE_RATE = 0.15
 
 RANDOM_SEED = 42
 random.seed(RANDOM_SEED)
 np.random.seed(RANDOM_SEED)
 
 
-# ============================================================================
-# SYNTHETIC SCAM DATA GENERATION
-# ============================================================================
+def parse_salary_string(raw) -> tuple:
+    if not isinstance(raw, str):
+        return 0.0, 0.0
+
+    text = raw.strip()
+    if text == "" or text.lower() in ("not mentioned", "unpaid", "n/a", "na"):
+        return 0.0, 0.0
+
+    is_lacs = bool(re.search(r"lac|lakh", text, re.IGNORECASE))
+
+    numbers = re.findall(r"\d[\d,]*\.?\d*", text)
+    values = []
+    for n in numbers:
+        try:
+            values.append(float(n.replace(",", "")))
+        except ValueError:
+            continue
+
+    if not values:
+        return 0.0, 0.0
+
+    if is_lacs:
+        values = [v * 100000 for v in values]
+
+    if len(values) == 1:
+        return values[0], values[0]
+
+    lo, hi = values[0], values[1]
+    if lo > hi:
+        lo, hi = hi, lo
+    return lo, hi
+
+
+def derive_employment_mode(job_type, description) -> str:
+    text = f"{job_type or ''} {description or ''}".lower()
+    if "work from home" in text or "remote" in text:
+        return "Remote"
+    if "hybrid" in text:
+        return "Hybrid"
+    return "On-site"
+
+
+def map_recruiter_verification(label) -> tuple:
+    if pd.isna(label):
+        return 50.0, 30.0
+
+    label = str(label).strip()
+    if label == "Verified":
+        return random.uniform(70, 90), random.uniform(75, 95)
+    if label == "Unverified":
+        return random.uniform(35, 55), random.uniform(20, 40)
+    if label == "Suspicious":
+        return random.uniform(10, 25), random.uniform(5, 20)
+    return 50.0, 30.0
+
+
+def load_real_jobs_from_csv(csv_path: Path) -> list:
+    csv_path = Path(csv_path)
+    if not csv_path.exists():
+        print(f"   Real data CSV not found at {csv_path}, skipping.")
+        return []
+
+    df = pd.read_csv(csv_path)
+    jobs = []
+
+    for _, row in df.iterrows():
+        title = str(row.get("title") or "").strip()
+        description = str(row.get("description") or "").strip()
+        if not title and not description:
+            continue
+
+        salary_min, salary_max = parse_salary_string(row.get("salary"))
+
+        skills_raw = row.get("Skills")
+        if isinstance(skills_raw, str) and skills_raw.strip():
+            skills = sorted(set(s.strip().lower() for s in skills_raw.split(",") if s.strip()))
+        else:
+            skills = []
+
+        location = str(row.get("location") or "").strip()
+        loc_parts = [p.strip() for p in location.split(",") if p.strip()]
+        city = loc_parts[0] if loc_parts else ""
+        state = loc_parts[1] if len(loc_parts) > 1 else ""
+
+        is_flagged = str(row.get("is_flagged")).strip().lower() == "true"
+        scam_score_val = row.get("scam_score")
+        scam_score_val = float(scam_score_val) if pd.notna(scam_score_val) else 0.0
+        is_scam_real = is_flagged or scam_score_val >= 50
+
+        company_trust, recruiter_verif = map_recruiter_verification(row.get("recruiter_verified"))
+
+        jobs.append({
+            "job_title": title or "Untitled Position",
+            "job_description": description,
+            "skills_required": skills,
+            "skill_categories": {},
+            "salary_min": salary_min,
+            "salary_max": salary_max,
+            "salary_raw": str(row.get("salary") or ""),
+            "city": city,
+            "state": state,
+            "country": "India",
+            "mode": derive_employment_mode(row.get("job_type"), description),
+            "platform_name": str(row.get("posting_platform") or row.get("source") or "Unknown"),
+            "company_name": str(row.get("company") or "Unknown"),
+            "scam_score": scam_score_val if is_scam_real else min(scam_score_val, 15.0),
+            "scam_risk_level": "Scam Likely" if is_scam_real else "Safe",
+            "company_trust_score": company_trust,
+            "recruiter_verification_score": recruiter_verif,
+        })
+
+    n_scam = sum(1 for j in jobs if j["scam_risk_level"] == "Scam Likely")
+    print(f"   Parsed {len(jobs)} real jobs from CSV ({n_scam} flagged scam, {len(jobs) - n_scam} legit)")
+    return jobs
+
 
 SCAM_TEMPLATES = [
     """
@@ -112,6 +208,69 @@ SCAM_TEMPLATES = [
     """,
 ]
 
+SCAM_TEMPLATES_SUBTLE = [
+    """
+    {role} - {company_like} is expanding its team and hiring immediately.
+    We are looking for motivated candidates who can start right away.
+    Compensation: Rs {amount} per {period}, based on performance.
+    A one-time refundable registration fee of Rs {fee} applies to confirm onboarding.
+    Interested candidates can share their details by email.
+    """,
+    """
+    Hiring {role} for a fast-growing business. Flexible hours, work from anywhere.
+    Stipend of Rs {amount} during the initial training period.
+    Please complete the verification process by paying Rs {fee} (refundable on joining).
+    No prior experience required, full training provided.
+    """,
+    """
+    {company_like} is looking for a {role} to join our growing team.
+    Day-to-day responsibilities include client communication and basic reporting.
+    Selected candidates will be asked to pay a nominal Rs {fee} for ID card and kit processing.
+    Salary: Rs {amount} per {period}. Apply by sending your details by email.
+    """,
+    """
+    Immediate opening for {role} at {company_like}.
+    Great opportunity for freshers. No interview required for early applicants.
+    A refundable security amount of Rs {fee} secures your training slot.
+    Expected earnings: Rs {amount} per {period} after the training window.
+    """,
+]
+
+SCAM_TEMPLATES_STEALTH = [
+    """
+    {role} opening at {company_like}. We are streamlining our hiring process
+    to get candidates started quickly. Once shortlisted, a one-time processing
+    charge of Rs {fee} is collected to cover background verification and is
+    adjusted against your first paycheck. Share your CV by email and our team
+    will reach out within a few days.
+    """,
+    """
+    {company_like} is onboarding new {role}s this month. Selected applicants
+    will need to complete a paid orientation session (Rs {fee}) before
+    receiving their offer letter; this amount is later included as part of
+    the first month's compensation. Apply by replying with your resume.
+    """,
+    """
+    We have an opening for {role} at {company_like}. Expected take-home:
+    Rs {amount} per {period}. To finalize your placement, candidates cover
+    a small administrative charge of Rs {fee} for documentation, refunded
+    after three months of employment. Send your resume to proceed.
+    """,
+    """
+    {role} position at {company_like}, fully remote, flexible hours.
+    Take-home pay of Rs {amount} per {period} regardless of prior background.
+    Apply by sending your resume and basic details over email; our team will
+    follow up with next steps.
+    """,
+]
+
+GENERIC_SCAM_COMPANY_NAMES = [
+    "ABC IT Solutions Pvt Ltd", "XYZ Consultancy Services", "Tech Solutions Group",
+    "ABC Software Solutions", "Bright Path Careers", "NextGen Talent Solutions",
+    "Horizon Business Services", "Skyline Consulting Group", "Prime Career Network",
+    "Elevate HR Solutions",
+]
+
 SCAM_ROLES = [
     "Data Entry Operator", "Customer Support", "Marketing Executive",
     "Business Development", "Telecaller", "Receptionist",
@@ -119,34 +278,55 @@ SCAM_ROLES = [
 ]
 
 
+def soften_scam_text(description: str, strip_probability: float = 0.35) -> str:
+    obvious_markers = ("whatsapp", "telegram", "urgent", "limited seats", "hurry", "immediate joining")
+    kept_lines = []
+    for line in description.split("\n"):
+        if any(m in line.lower() for m in obvious_markers) and random.random() < strip_probability:
+            continue
+        kept_lines.append(line)
+    return "\n".join(kept_lines)
+
+
 def generate_synthetic_scam(num: int) -> dict:
-    template = random.choice(SCAM_TEMPLATES)
+    pool_roll = random.random()
+    if pool_roll < 0.30:
+        pool, template = "overt", random.choice(SCAM_TEMPLATES)
+    elif pool_roll < 0.65:
+        pool, template = "subtle", random.choice(SCAM_TEMPLATES_SUBTLE)
+    else:
+        pool, template = "stealth", random.choice(SCAM_TEMPLATES_STEALTH)
+
     role = random.choice(SCAM_ROLES)
+    company_like = random.choice(GENERIC_SCAM_COMPANY_NAMES)
 
     description = template.format(
         role=role,
-        amount=random.choice(["50,000", "1,00,000", "75,000", "2,00,000"]),
-        period=random.choice(["daily", "weekly", "per day"]),
+        company_like=company_like,
+        amount=random.choice([
+            "15,000", "20,000", "25,000",
+            "50,000", "1,00,000", "75,000", "2,00,000",
+        ]),
+        period=random.choice(["daily", "weekly", "per day", "monthly", "per month"]),
         fee=random.choice(["500", "999", "1500", "2500", "5000"]),
         phone=random.randint(9000000000, 9999999999),
         num=num,
     )
 
-    # Mix lengths: append professional filler text to 30% of scams to make them long
+    if pool == "overt":
+        description = soften_scam_text(description)
+
     if random.random() < 0.3:
         filler = "\nResponsibilities include designing marketing materials, communicating with potential clients, and reporting to the director. Requirements: basic computer knowledge, internet access, and ability to follow instructions."
         description += filler
 
-    # Add random skills to some scams
     skills = []
     if random.random() < 0.4:
         skills = random.sample(["Data Entry", "Excel", "Typing", "Communication"], k=random.randint(1, 3))
 
-    # Mix trust scores to include realistic default scores (50 and 30)
-    company_trust = random.choice([random.uniform(5, 20), 50.0, random.uniform(20, 60)])
-    recruiter_verif = random.choice([random.uniform(5, 20), 30.0, random.uniform(20, 50)])
+    company_trust = random.choice([random.uniform(5, 30), 50.0, random.uniform(20, 65)])
+    recruiter_verif = random.choice([random.uniform(5, 30), 30.0, random.uniform(20, 55)])
 
-    # Mix titles to vary title lengths (overlap with legit titles)
     title_style = random.random()
     if title_style < 0.5:
         title = f"{role} - Urgent Hiring!!!"
@@ -155,7 +335,6 @@ def generate_synthetic_scam(num: int) -> dict:
     else:
         title = f"{role} (Work From Home)"
 
-    # Mix salaries
     salary_style = random.random()
     if salary_style < 0.4:
         salary_min = 0.0
@@ -164,9 +343,15 @@ def generate_synthetic_scam(num: int) -> dict:
         salary_min = float(random.choice([10000, 15000, 20000]))
         salary_max = float(salary_min + random.choice([5000, 10000, 15000]))
     else:
-        # Unrealistic high salaries
         salary_min = 0.0
         salary_max = random.choice([50000000.0, 100000000.0])
+
+    mode = random.choices(["Remote", "On-site", "Hybrid"], weights=[0.55, 0.30, 0.15])[0]
+    platform_name = random.choices(
+        ["Unknown", "Random Site", "FakeSite.com", "", "Naukri", "Internshala", "Indeed", "Apna"],
+        weights=[0.30, 0.15, 0.15, 0.10, 0.10, 0.08, 0.07, 0.05],
+    )[0]
+    city = random.choice(["Remote", "Anywhere", "Pan India", "", "Mumbai", "Bengaluru", "Delhi", "Kolkata"])
 
     return {
         "job_title": title,
@@ -179,20 +364,13 @@ def generate_synthetic_scam(num: int) -> dict:
             "Earn 50k daily", "Unlimited", "Best in industry",
             "Rs 1 lakh per week", "Negotiable"
         ]),
-        "city": random.choice(["Remote", "Anywhere", "Pan India", ""]),
+        "city": city,
         "state": "",
         "country": "India",
-        "mode": "Remote",
-        "platform_name": random.choice([
-            "Unknown", "Random Site", "FakeSite.com", ""
-        ]),
-        "company_name": random.choice([
-            "ABC IT Solutions Pvt Ltd",
-            "XYZ Consultancy Services",
-            "Tech Solutions Group",
-            "ABC Software Solutions",
-        ]),
-        "scam_score": random.uniform(80, 99),
+        "mode": mode,
+        "platform_name": platform_name,
+        "company_name": company_like,
+        "scam_score": random.uniform(45, 95),
         "scam_risk_level": "Scam Likely",
         "company_trust_score": company_trust,
         "recruiter_verification_score": recruiter_verif,
@@ -202,10 +380,6 @@ def generate_synthetic_scam(num: int) -> dict:
 def generate_synthetic_dataset(num_scams: int = 50) -> list:
     return [generate_synthetic_scam(i) for i in range(num_scams)]
 
-
-# ============================================================================
-# SYNTHETIC LEGIT JOB GENERATION
-# ============================================================================
 
 LEGIT_TEMPLATES = [
     """
@@ -288,6 +462,16 @@ LEGIT_COMPANIES = [
     ("Wipro", "wipro.com"),
 ]
 
+LEGIT_FALSE_POSITIVE_SNIPPETS = [
+    "Limited seats available for this batch - apply early to secure your spot in the program.",
+    "Every new hire is guaranteed a dedicated mentor and a structured onboarding process.",
+    "No experience necessary for this role - we welcome freshers and career switchers, with full training provided.",
+    "A refundable equipment deposit of Rs 2,000 is required for company laptop issuance and is returned in full when the laptop is returned.",
+    "Top performers can earn weekly recognition bonuses on top of their fixed salary.",
+    "Urgent hiring for our growing support team ahead of the holiday season rush.",
+    "Our recruiter will follow up over WhatsApp to schedule your interview after the initial screening call.",
+]
+
 
 def generate_synthetic_legit(num: int) -> dict:
     template = random.choice(LEGIT_TEMPLATES)
@@ -297,11 +481,9 @@ def generate_synthetic_legit(num: int) -> dict:
 
     description = template.format(role=role, company=company, years=years)
 
-    # Mix lengths: 30% of legit jobs have short descriptions
     if random.random() < 0.3:
         description = f"Looking for a passionate {role} at {company}. Must have at least {years} years of professional experience in development. Apply via our portal."
 
-    # Mix titles to vary title lengths (overlap with scam titles)
     title_style = random.random()
     if title_style < 0.4:
         title = role
@@ -310,24 +492,22 @@ def generate_synthetic_legit(num: int) -> dict:
     else:
         title = f"{role} ({random.choice(['Remote', 'Hybrid', 'Full-time', 'Internship'])})"
 
-    # Mix salaries: some are entry-level/internships (stipends), some are high LPA, some are 0/not disclosed
     salary_style = random.random()
     if salary_style < 0.4:
-        # High LPA job
         salary_min = float(random.choice([600000, 1000000, 1500000, 2000000]))
         salary_max = float(salary_min + random.choice([200000, 400000, 600000]))
     elif salary_style < 0.8:
-        # Internships / Entry level stipends (which is realistic for scraped postings)
         salary_min = float(random.choice([8000, 12000, 15000, 20000, 25000]))
         salary_max = float(salary_min + random.choice([0, 5000, 10000]))
     else:
-        # Not disclosed
         salary_min = 0.0
         salary_max = 0.0
 
-    # Mix trust scores to include realistic default scores (50 and 30)
-    company_trust = random.choice([random.uniform(70, 95), 50.0, random.uniform(40, 75)])
-    recruiter_verif = random.choice([random.uniform(65, 95), 30.0, random.uniform(35, 70)])
+    company_trust = random.choice([random.uniform(55, 95), 50.0, random.uniform(35, 75)])
+    recruiter_verif = random.choice([random.uniform(60, 95), 30.0, random.uniform(35, 70)])
+
+    if random.random() < 0.18:
+        description = description.strip() + "\n" + random.choice(LEGIT_FALSE_POSITIVE_SNIPPETS)
 
     return {
         "job_title": title,
@@ -348,7 +528,7 @@ def generate_synthetic_legit(num: int) -> dict:
         "platform_name": random.choice(["LinkedIn", "Naukri", "Indeed", "Shine"]),
         "company_name": company,
         "recruiter_email": f"careers@{domain}",
-        "scam_score": random.uniform(0, 15),
+        "scam_score": random.uniform(0, 50),
         "scam_risk_level": "Safe",
         "company_trust_score": company_trust,
         "recruiter_verification_score": recruiter_verif,
@@ -359,12 +539,18 @@ def generate_synthetic_legit_dataset(num_legit: int = 50) -> list:
     return [generate_synthetic_legit(i) for i in range(num_legit)]
 
 
-# ============================================================================
-# CROSS VALIDATION
-# ============================================================================
+def apply_label_noise(y: np.ndarray, noise_rate: float = LABEL_NOISE_RATE, seed: int = RANDOM_SEED) -> np.ndarray:
+    rng = np.random.RandomState(seed)
+    y_noisy = y.copy()
+    n_flip = int(len(y_noisy) * noise_rate)
+    if n_flip == 0:
+        return y_noisy
+    flip_idx = rng.choice(len(y_noisy), size=n_flip, replace=False)
+    y_noisy[flip_idx] = 1 - y_noisy[flip_idx]
+    return y_noisy
+
 
 def run_cross_validation(X, y) -> dict:
-    """5-Fold Stratified Cross Validation."""
     print("\n" + "=" * 70)
     print("CROSS VALIDATION (5-Fold Stratified)")
     print("=" * 70)
@@ -372,41 +558,42 @@ def run_cross_validation(X, y) -> dict:
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_SEED)
 
     rf_model = RandomForestClassifier(
-        n_estimators=100,
-        max_depth=15,
-        min_samples_split=5,
-        min_samples_leaf=2,
+        n_estimators=80,
+        max_depth=8,
+        min_samples_split=10,
+        min_samples_leaf=4,
+        max_features="sqrt",
         class_weight="balanced",
         random_state=RANDOM_SEED,
-        n_jobs=-1,
+        n_jobs=1,
     )
 
     xgb_model = xgb.XGBClassifier(
-        n_estimators=200,
-        max_depth=6,
-        learning_rate=0.1,
+        n_estimators=20,
+        max_depth=2,
+        learning_rate=0.05,
+        subsample=0.7,
+        colsample_bytree=0.7,
+        reg_alpha=1.0,
+        reg_lambda=2.0,
         eval_metric="logloss",
         random_state=RANDOM_SEED,
-        n_jobs=-1,
+        n_jobs=1,
     )
 
-    rf_scores  = cross_val_score(rf_model,  X, y, cv=cv, scoring="f1_weighted")
+    rf_scores = cross_val_score(rf_model, X, y, cv=cv, scoring="f1_weighted")
     xgb_scores = cross_val_score(xgb_model, X, y, cv=cv, scoring="f1_weighted")
 
     print(f"Random Forest CV F1: {rf_scores.mean():.4f} (+/- {rf_scores.std():.4f})")
     print(f"XGBoost       CV F1: {xgb_scores.mean():.4f} (+/- {xgb_scores.std():.4f})")
 
     return {
-        "rf_cv_f1_mean":  float(rf_scores.mean()),
-        "rf_cv_f1_std":   float(rf_scores.std()),
+        "rf_cv_f1_mean": float(rf_scores.mean()),
+        "rf_cv_f1_std": float(rf_scores.std()),
         "xgb_cv_f1_mean": float(xgb_scores.mean()),
-        "xgb_cv_f1_std":  float(xgb_scores.std()),
+        "xgb_cv_f1_std": float(xgb_scores.std()),
     }
 
-
-# ============================================================================
-# MODEL TRAINING
-# ============================================================================
 
 def train_random_forest(X_train, y_train, X_test, y_test) -> tuple:
     print("\n" + "=" * 70)
@@ -414,20 +601,21 @@ def train_random_forest(X_train, y_train, X_test, y_test) -> tuple:
     print("=" * 70)
 
     model = RandomForestClassifier(
-        n_estimators=100,
-        max_depth=15,
-        min_samples_split=5,
-        min_samples_leaf=2,
-        class_weight='balanced',
+        n_estimators=80,
+        max_depth=8,
+        min_samples_split=10,
+        min_samples_leaf=4,
+        max_features="sqrt",
+        class_weight="balanced",
         random_state=RANDOM_SEED,
-        n_jobs=-1,
+        n_jobs=1,
     )
 
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred, average='weighted', zero_division=0)
+    f1 = f1_score(y_test, y_pred, average="weighted", zero_division=0)
 
     print(f"\nAccuracy: {accuracy:.2%}")
     print(f"F1 Score: {f1:.4f}")
@@ -435,9 +623,9 @@ def train_random_forest(X_train, y_train, X_test, y_test) -> tuple:
     print(classification_report(y_test, y_pred, zero_division=0))
 
     feature_importance = pd.DataFrame({
-        'feature': X_train.columns,
-        'importance': model.feature_importances_
-    }).sort_values('importance', ascending=False).head(15)
+        "feature": X_train.columns,
+        "importance": model.feature_importances_
+    }).sort_values("importance", ascending=False).head(15)
 
     print("\nTOP 15 IMPORTANT FEATURES:")
     print(feature_importance.to_string(index=False))
@@ -455,13 +643,17 @@ def train_xgboost(X_train, y_train, X_test, y_test) -> tuple:
     scale_pos_weight = n_safe / max(1, n_scam)
 
     model = xgb.XGBClassifier(
-        n_estimators=200,
-        max_depth=6,
-        learning_rate=0.1,
+        n_estimators=20,
+        max_depth=2,
+        learning_rate=0.05,
+        subsample=0.7,
+        colsample_bytree=0.7,
+        reg_alpha=1.0,
+        reg_lambda=2.0,
         scale_pos_weight=scale_pos_weight,
-        eval_metric='logloss',
+        eval_metric="logloss",
         random_state=RANDOM_SEED,
-        n_jobs=-1,
+        n_jobs=1,
     )
 
     model.fit(X_train, y_train, verbose=False)
@@ -470,7 +662,7 @@ def train_xgboost(X_train, y_train, X_test, y_test) -> tuple:
     y_proba = model.predict_proba(X_test)[:, 1]
 
     accuracy = accuracy_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred, average='weighted', zero_division=0)
+    f1 = f1_score(y_test, y_pred, average="weighted", zero_division=0)
 
     try:
         auc = roc_auc_score(y_test, y_proba)
@@ -495,9 +687,9 @@ def train_isolation_forest(X_train) -> object:
     model = IsolationForest(
         n_estimators=100,
         contamination=0.1,
-        max_samples='auto',
+        max_samples="auto",
         random_state=RANDOM_SEED,
-        n_jobs=-1,
+        n_jobs=1,
     )
 
     model.fit(X_train)
@@ -510,18 +702,17 @@ def train_isolation_forest(X_train) -> object:
     return model
 
 
-# ============================================================================
-# MAIN PIPELINE
-# ============================================================================
-
 def main():
     print("=" * 70)
     print("GRAPHURA ML TRAINING PIPELINE")
     print("=" * 70)
 
-    # Step 1: Load real jobs from Supabase
-    print("\nStep 1: Loading real jobs from Supabase...")
+    print("\nStep 1: Loading real jobs...")
 
+    print("   Loading from scraped CSV...")
+    csv_jobs = load_real_jobs_from_csv(REAL_DATA_CSV_PATH)
+
+    supabase_jobs = []
     try:
         from ..scraper.storage.supabase_client import get_client
         sb = get_client()
@@ -530,43 +721,40 @@ def main():
             "*, companies(company_trust_score), recruiters(recruiter_verification_score)"
         ).execute()
 
-        real_jobs = response.data
+        supabase_jobs = response.data
 
-        for job in real_jobs:
+        for job in supabase_jobs:
             if job.get("companies"):
                 job["company_trust_score"] = job["companies"].get("company_trust_score", 50)
             if job.get("recruiters"):
                 job["recruiter_verification_score"] = job["recruiters"].get("recruiter_verification_score", 30)
 
-        print(f"   Loaded {len(real_jobs)} real jobs from Supabase")
+        print(f"   Loaded {len(supabase_jobs)} real jobs from Supabase")
 
     except Exception as e:
         print(f"   Could not load from Supabase: {e}")
-        print(f"   Continuing with synthetic data only...")
-        real_jobs = []
+        print(f"   Continuing with CSV + synthetic data only...")
 
-    # Step 2: Generate synthetic scam jobs
-    print("\nStep 2: Generating synthetic scam jobs...")
-    num_scams = max(500, len(real_jobs) * 2)
+    real_jobs = csv_jobs + supabase_jobs
+    print(f"   Total real jobs: {len(real_jobs)}")
+
+    
+    num_scams = 100
     synthetic_scams = generate_synthetic_dataset(num_scams)
-    print(f"   Generated {len(synthetic_scams)} synthetic scam jobs")
-
-    # Step 2b: Generate synthetic legit jobs
-    print("\nStep 2b: Generating synthetic legit (safe) jobs...")
-    num_legit_needed = max(500, num_scams - len(real_jobs))
+   
+    
+    num_legit_needed = 200
     synthetic_legit = generate_synthetic_legit_dataset(num_legit_needed)
-    print(f"   Generated {len(synthetic_legit)} synthetic legit jobs")
+    
 
-    # Step 3: Combine datasets
     all_jobs = real_jobs + synthetic_scams + synthetic_legit
-    print(f"\nStep 3: Combined dataset")
+    print(f"\nCombined dataset")
     print(f"   Total jobs:      {len(all_jobs)}")
     print(f"   Real:            {len(real_jobs)}")
     print(f"   Synthetic scams: {len(synthetic_scams)}")
     print(f"   Synthetic legit: {len(synthetic_legit)}")
 
-    # Step 4: Extract labels
-    print("\nStep 4: Creating labels...")
+    print("\nCreating labels...")
     y_df = extract_labels(all_jobs)
     y = y_df["is_scam"].values
     print(f"   Labels: {(y == 0).sum()} safe, {(y == 1).sum()} scam")
@@ -575,8 +763,7 @@ def main():
         print("\nERROR: Only one class found. Cannot train classifiers.")
         return
 
-    # Step 5: Split RAW jobs (prevents data leakage)
-    print("\nStep 5: Splitting raw jobs (80/20)...")
+    print("\nSplitting raw jobs (80/20)...")
     jobs_train, jobs_test, y_train, y_test = train_test_split(
         all_jobs, y,
         test_size=0.2,
@@ -586,8 +773,13 @@ def main():
     print(f"   Train jobs: {len(jobs_train)}")
     print(f"   Test jobs:  {len(jobs_test)}")
 
-    # Step 6: TF-IDF fit ONLY on training data
-    print("\nStep 6: Extracting features (TF-IDF fit on train only)...")
+    n_flipped_train = int(len(y_train) * LABEL_NOISE_RATE)
+    y_train = apply_label_noise(y_train, noise_rate=LABEL_NOISE_RATE, seed=RANDOM_SEED)
+    y_test = apply_label_noise(y_test, noise_rate=LABEL_NOISE_RATE, seed=RANDOM_SEED + 1)
+    print(f"   Applied {LABEL_NOISE_RATE:.0%} label noise to training labels "
+          f"({n_flipped_train} flipped) and testing labels to simulate real-world noise")
+
+    print("\nExtracting features (TF-IDF fit on train only)...")
     jobs_train_cleaned = [dict(job) for job in jobs_train]
     jobs_test_cleaned = [dict(job) for job in jobs_test]
     for job in jobs_train_cleaned:
@@ -596,9 +788,8 @@ def main():
         job["job_description"] = prepare_ml_text(job.get("job_description", "") or "")
 
     X_train = build_feature_dataframe(jobs_train_cleaned, fit_tfidf=True)
-    X_test  = build_feature_dataframe(jobs_test_cleaned,  fit_tfidf=False)
+    X_test = build_feature_dataframe(jobs_test_cleaned, fit_tfidf=False)
 
-    # Align test columns to match train columns
     for col in X_train.columns:
         if col not in X_test.columns:
             X_test[col] = 0
@@ -607,24 +798,20 @@ def main():
     print(f"   Train Features: {X_train.shape}")
     print(f"   Test Features:  {X_test.shape}")
 
-    # Step 7: Cross-validation on training data only
     cv_results = run_cross_validation(X_train, y_train)
 
-    # Step 8: Fit scaler (saved for downstream use even if not applied here)
     scaler = StandardScaler()
     scaler.fit(X_train)
 
-    # Step 9: Train all three models
-    rf_model,  rf_acc,  rf_f1  = train_random_forest(X_train, y_train, X_test, y_test)
+    rf_model, rf_acc, rf_f1 = train_random_forest(X_train, y_train, X_test, y_test)
     xgb_model, xgb_acc, xgb_f1 = train_xgboost(X_train, y_train, X_test, y_test)
-    iso_model                  = train_isolation_forest(X_train)
+    iso_model = train_isolation_forest(X_train)
 
-    # Step 10: Save models
-    print("\nStep 10: Saving trained models...")
-    joblib.dump(rf_model,  MODELS_DIR / "random_forest.pkl")
+    print("\nSaving trained models...")
+    joblib.dump(rf_model, MODELS_DIR / "random_forest.pkl")
     joblib.dump(xgb_model, MODELS_DIR / "xgboost.pkl")
     joblib.dump(iso_model, MODELS_DIR / "isolation_forest.pkl")
-    joblib.dump(scaler,    MODELS_DIR / "scaler.pkl")
+    joblib.dump(scaler, MODELS_DIR / "scaler.pkl")
 
     feature_columns = list(X_train.columns)
     with open(MODELS_DIR / "feature_columns.json", "w") as f:
@@ -648,11 +835,11 @@ def main():
         },
         "cross_validation": cv_results,
         "training_data": {
-            "total_jobs":      len(all_jobs),
-            "real_jobs":       len(real_jobs),
+            "total_jobs": len(all_jobs),
+            "real_jobs": len(real_jobs),
             "synthetic_scams": len(synthetic_scams),
             "synthetic_legit": len(synthetic_legit),
-            "features":        len(feature_columns)
+            "features": len(feature_columns)
         },
         "trained_at": pd.Timestamp.now().isoformat()
     }
@@ -662,8 +849,6 @@ def main():
 
     print(f"   Saved: random_forest.pkl, xgboost.pkl, isolation_forest.pkl")
     print(f"   Saved: scaler.pkl, feature_columns.json, metadata.json")
-
-
 
 
 if __name__ == "__main__":

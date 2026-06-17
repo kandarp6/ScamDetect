@@ -1,21 +1,10 @@
-"""
-location_normalizer.py
-Normalize Indian location strings to clean city/state/country.
+#location_normalizer.py
 
-Handles messy variations:
-    - "Bangalore", "Bengaluru", "bangalore, india"
-    - "Delhi NCR"
-    - "Work From Home", "Remote", "WFH"
-
-Returns a NormalizedLocation object with structured fields.
-"""
 
 from dataclasses import dataclass
 
 
-# ============================================================================
 # DATA STRUCTURE
-# ============================================================================
 
 @dataclass
 class NormalizedLocation:
@@ -26,9 +15,7 @@ class NormalizedLocation:
     raw:     str = ""
 
 
-# ============================================================================
 # CITY MAPPINGS (Knowledge Base)
-# ============================================================================
 
 CITY_ALIAS_MAP = {
     # Delhi NCR
@@ -120,9 +107,7 @@ CITY_ALIAS_MAP = {
 }
 
 
-# ============================================================================
 # PRE-COMPUTED SORTED ALIASES (longest first)
-# ============================================================================
 
 _SORTED_ALIASES = sorted(
     CITY_ALIAS_MAP.items(),
@@ -131,9 +116,7 @@ _SORTED_ALIASES = sorted(
 )
 
 
-# ============================================================================
 # MAIN FUNCTION
-# ============================================================================
 
 def normalize_location(raw: str) -> NormalizedLocation:
     """
@@ -161,9 +144,7 @@ def normalize_location(raw: str) -> NormalizedLocation:
     )
 
 
-# ============================================================================
 # UTILITY FUNCTION
-# ============================================================================
 
 def is_remote_location(raw: str) -> bool:
     """Return True if location string indicates remote work."""
@@ -175,9 +156,7 @@ def is_remote_location(raw: str) -> bool:
     return any(kw in key for kw in remote_keywords)
 
 
-# ============================================================================
 # SELF-TEST
-# ============================================================================
 
 def _self_test():
     print("=" * 70)

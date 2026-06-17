@@ -1,17 +1,5 @@
-"""
-predict.py
-Use trained ML models to predict if a job is a scam.
+#predict.py
 
-Ensemble Logic:
-    XGBoost (50%) + Random Forest (35%) + Isolation Forest (15%)
-
-Usage:
-    python -m backend.ml.predict
-    
-    # Or programmatically:
-    from backend.ml.predict import predict_job
-    result = predict_job(job_dict)
-"""
 
 import json
 import joblib
@@ -24,9 +12,7 @@ from .feature_extractor import build_feature_dataframe
 from .nlp_engine import prepare_ml_text, process_job_description, calculate_final_score
 
 
-# ============================================================================
 # CONFIGURATION
-# ============================================================================
 
 MODELS_DIR = Path(__file__).parent / "models"
 
@@ -37,9 +23,7 @@ ENSEMBLE_WEIGHTS = {
 }
 
 
-# ============================================================================
 # DATA STRUCTURE
-# ============================================================================
 
 @dataclass
 class MLPrediction:
@@ -57,9 +41,7 @@ class MLPrediction:
     top_safe_features: list = field(default_factory=list)
 
 
-# ============================================================================
-# MODEL LOADING (Singleton — load once, reuse)
-# ============================================================================
+# MODEL LOADING (Singleton  load once, reuse)
 
 _models_cache = {
     "loaded": False,
@@ -101,9 +83,7 @@ def load_models() -> dict:
     return _models_cache
 
 
-# ============================================================================
 # PREDICTION FUNCTIONS
-# ============================================================================
 
 def predict_job(job: dict, verbose: bool = False) -> MLPrediction:
     """
@@ -209,9 +189,7 @@ def predict_batch(jobs: list, verbose: bool = False) -> list:
     return results
 
 
-# ============================================================================
 # FEATURE INTERPRETATION
-# ============================================================================
 
 def _get_top_risk_features(df: pd.DataFrame, models: dict, top_n: int = 5) -> list:
     """Get the top features pushing this job toward 'scam'."""
@@ -292,9 +270,7 @@ def _humanize_feature_name(name: str) -> str:
     return name_map.get(name, name.replace("_", " ").title())
 
 
-# ============================================================================
 # DISPLAY HELPERS
-# ============================================================================
 
 def print_prediction(prediction: MLPrediction, job: dict = None):
     """Print a formatted prediction report."""
@@ -330,9 +306,7 @@ def print_prediction(prediction: MLPrediction, job: dict = None):
     print("\n" + "=" * 70)
 
 
-# ============================================================================
 # SELF-TEST
-# ============================================================================
 
 def main():
     print("=" * 70)
