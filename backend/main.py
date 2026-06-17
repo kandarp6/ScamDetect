@@ -136,6 +136,46 @@ async def analyze_job(job: JobAnalysisRequest):
     try:
         job_dict = job.dict()
         prediction = predict_job(job_dict)
+
+        # Save pasted job to the database so that it updates "Total Jobs Analyzed" and logs
+        try:
+            from backend.scraper.storage.supabase_client import upsert_company, insert_job
+            import hashlib
+            
+            job_hash = hashlib.sha256(job.job_description.encode()).hexdigest()[:16]
+            co_name = job.company_name or "Pasted Job Company"
+            co_id = upsert_company(co_name)
+            
+            job_record = {
+                "job_hash": job_hash,
+                "job_title": job.job_title or "Pasted Job Description",
+                "company_id": co_id,
+                "recruiter_id": None,
+                "city": job.city or "Remote",
+                "state": "",
+                "country": "India",
+                "location_raw": job.city or "Remote",
+                "mode": "Remote",
+                "salary_min": 0,
+                "salary_max": 0,
+                "salary_raw": job.salary_raw or "",
+                "job_description": job.job_description,
+                "skills_required": [],
+                "skill_count": 0,
+                "skill_categories": {},
+                "scam_score": prediction.ensemble_score,
+                "scam_risk_level": prediction.risk_level,
+                "risk_factors": [f.get("feature", "Suspicious pattern") for f in prediction.top_risk_features],
+                "job_quality_score": max(0, 100 - prediction.ensemble_score),
+                "source_url": f"pasted://{job_hash}",
+                "platform_name": job.platform_name or "Direct Paste",
+                "posted_date": "",
+                "social_media_mentions": "",
+            }
+            insert_job(job_record)
+        except Exception as db_err:
+            print(f"Failed to save pasted job to database: {db_err}")
+
         return {
             "score": prediction.ensemble_score,
             "risk_level": prediction.risk_level,

@@ -21,9 +21,24 @@ function showPage(id, el) {
 }
 
 function goCheck() {
-  var v = document.getElementById("home-url").value;
-  if (v) document.getElementById("check-url").value = v;
+  var v = document.getElementById("home-url").value.trim();
+  if (!v) {
+    showPage("checker");
+    return;
+  }
+
+  var isUrl = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})/i.test(v) && !v.includes(" ") && !v.includes("\n");
+
+  if (isUrl) {
+    document.getElementById("check-url").value = v;
+    document.getElementById("check-desc").value = "";
+  } else {
+    document.getElementById("check-url").value = "";
+    document.getElementById("check-desc").value = v;
+  }
+
   showPage("checker");
+  runCheck();
 }
 
 // Scam Check

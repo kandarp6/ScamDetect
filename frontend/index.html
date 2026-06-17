@@ -251,7 +251,7 @@ select.input{cursor:pointer;appearance:none;padding-right:32px}
           <div style="display:flex;align-items:center;padding:0 12px;color:var(--ink-3)">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           </div>
-          <input id="home-url" type="text" placeholder="Paste a job URL or company name..." style="flex:1;border:none;outline:none;padding:11px 0;font-size:14px;color:var(--ink);font-family:'Inter',sans-serif;background:transparent">
+          <input id="home-url" type="text" placeholder="Paste a job URL or company name..." onkeydown="if(event.key==='Enter')goCheck()" style="flex:1;border:none;outline:none;padding:11px 0;font-size:14px;color:var(--ink);font-family:'Inter',sans-serif;background:transparent">
           <button onclick="goCheck()" style="background:var(--red);color:white;border:none;padding:11px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap">Check now</button>
         </div>
         <div style="font-size:12px;color:var(--ink-3);margin-top:10px">Works with LinkedIn, Naukri, Internshala, WhatsApp forwards, and plain text.</div>
