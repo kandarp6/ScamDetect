@@ -43,7 +43,6 @@ from backend.scraper.storage.supabase_client import (
     get_existing_job_hashes,
 )
 from backend.scraper.engines.url_scraper import scrape_job_url
-from playwright_stealth import Stealth
 
 async def stealth_async(page):
     await Stealth().apply_stealth_async(page)
