@@ -11,7 +11,10 @@ from pathlib import Path
 from decouple import config as env
 from loguru import logger
 from playwright.async_api import async_playwright
-from playwright_stealth import stealth_async
+from playwright_stealth import Stealth
+
+async def stealth_async(page):
+    await Stealth().apply_stealth_async(page)
 
 from .connectors import CONNECTOR_REGISTRY
 from .connectors.base import BaseConnector

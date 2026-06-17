@@ -10,7 +10,7 @@ Author: Graphura India Pvt Ltd
 
 import re
 import nltk
-from typing import List
+from typing import List, Dict
 
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
@@ -89,7 +89,19 @@ SCAM_KEYWORDS = {
 
     "salary guaranteed": 82,
 
-    "pay and join": 98
+    "pay and join": 98,
+
+    # New additions
+    "make money": 75,
+    "no experience": 70,
+    "no resume": 80,
+    "no background check": 85,
+    "start immediately": 80,
+    "instant payout": 90,
+    "transfer funds": 95,
+    "personal account": 90,
+    "comfort of bed": 80,
+    "accept automatically": 85,
 }
 
 
@@ -123,17 +135,25 @@ SCAM_SYNONYMS = {
     "instant joining": [
         "direct joining", "immediate joining", "join immediately",
         "join today", "start today", "joining today",
-        "same day joining", "joining without interview"
+        "same day joining", "joining without interview",
+        # New additions
+        "start immediately", "urgent workers"
     ],
     "no interview": [
         "no selection process", "instant selection", "no interview needed",
         "no interview required", "direct selection", "without interview",
-        "no screening", "no test required"
+        "no screening", "no test required",
+        # New additions
+        "no resume needed", "no resume required", "no background check", 
+        "everyone is accepted automatically", "no experience required", 
+        "absolutely none required", "accepted automatically"
     ],
     "earn daily": [
         "daily earnings", "earn per day", "daily income",
         "paid daily", "daily payment", "earn every day",
-        "get paid daily", "daily payout"
+        "get paid daily", "daily payout", "daily payouts", "daily payout instantly",
+        # New additions
+        "daily payouts instantly", "daily instant payouts", "instant payouts"
     ],
     "limited seats": [
         "limited slots", "hurry up", "last few seats",
@@ -148,57 +168,81 @@ SCAM_SYNONYMS = {
     "work from home earn": [
         "earn from home", "work at home", "home based job",
         "online earning", "earn sitting at home", "home job",
-        "remote earning", "online income"
+        "remote earning", "online income",
+        # New additions
+        "comfort of your bed", "comfort of bed"
     ],
     "pay to work": [
         "pay and work", "invest to earn", "deposit to join",
         "pay before joining", "fee before work", "charges to join"
+    ],
+    
+    # New synonym rules
+    "transfer funds": [
+        "transfer processing funds", "transfer processing fund", "transfer fund",
+        "transfer money", "transfer payments"
+    ],
+    "personal account": [
+        "use personal account", "use your personal account", "using your personal account"
     ]
 
 }
+
+
+# HELPER FOR RAW TEXT CLEANING & SYNONYM REPLACEMENT (BEFORE STEMMING)
+
+def clean_and_replace_synonyms(text: str) -> str:
+    """
+    Lowercase and clean text, then replace unstemmed synonyms using word boundaries
+    to prevent partial substring replacements (e.g. replacing 'wa' inside 'wallet').
+    """
+    if text is None:
+        return ""
+    text = str(text).lower()
+    
+    # remove html
+    text = re.sub(r"<.*?>", " ", text)
+    # remove urls
+    text = re.sub(r"http\S+|www\S+", " ", text)
+    # remove emails
+    text = re.sub(r"\S+@\S+", " ", text)
+    
+    # remove punctuation
+    text = re.sub(r"[^a-zA-Z0-9\s]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    
+    # replace synonyms using word boundaries
+    for canonical, synonyms in SCAM_SYNONYMS.items():
+        canonical_clean = re.sub(r"[^a-zA-Z0-9\s]", " ", canonical).lower()
+        canonical_clean = re.sub(r"\s+", " ", canonical_clean).strip()
+        for synonym in synonyms:
+            syn_clean = re.sub(r"[^a-zA-Z0-9\s]", " ", synonym).lower()
+            syn_clean = re.sub(r"\s+", " ", syn_clean).strip()
+            if syn_clean:
+                text = re.sub(r"\b" + re.escape(syn_clean) + r"\b", canonical_clean, text)
+                
+    return text
+
 
 # TEXT PREPROCESSING
 
 def preprocess_text(text: str) -> str:
     """
-    Clean and normalize text.
-
-    Steps:
-    1. Lowercase
-    2. Remove URLs
-    3. Remove Emails
-    4. Remove HTML
-    5. Remove punctuation
-    6. Remove extra spaces
-    7. Tokenize
-    8. Remove stopwords
-    9. Lemmatize
-
-    Returns cleaned string.
+    Tokenize, remove stopwords, and stem clean text.
     """
-
     if text is None:
         return ""
 
     text = str(text)
 
-    # lowercase
-    text = text.lower()
-
-    # remove html
-    text = re.sub(r"<.*?>", " ", text)
-
-    # remove urls
-    text = re.sub(r"http\\S+|www\\S+", " ", text)
-
-    # remove emails
-    text = re.sub(r"\\S+@\\S+", " ", text)
-
-    # remove punctuation
-    text = re.sub(r"[^a-zA-Z0-9\\s]", " ", text)
-
-    # remove extra spaces
-    text = re.sub(r"\\s+", " ", text).strip()
+    # If it hasn't been cleaned yet (fallback safety), apply a light cleaning
+    if any(c in text for c in ["<", ">", "@", "http", "www"]) or not text.islower():
+        text = text.lower()
+        text = re.sub(r"<.*?>", " ", text)
+        text = re.sub(r"http\S+|www\S+", " ", text)
+        text = re.sub(r"\S+@\S+", " ", text)
+        text = re.sub(r"[^a-zA-Z0-9\s]", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()
 
     # tokenize
     tokens = word_tokenize(text)
@@ -216,28 +260,15 @@ def preprocess_text(text: str) -> str:
     cleaned_text = " ".join(cleaned_tokens)
 
     return cleaned_text
-# REPLACE SYNONYMS
+
+
+# REPLACE SYNONYMS (Backward-compatible fallback)
 
 def replace_synonyms(text: str) -> str:
     """
-    Replace scam synonyms with standard keywords.
-
-    Example:
-    registration charges -> registration fee
-    processing charges -> processing fee
-    immediate joining -> instant joining
+    Backward-compatible method to replace synonyms.
     """
-
-    if not text:
-        return ""
-
-    updated_text = text
-
-    for canonical, synonyms in SCAM_SYNONYMS.items():
-        for synonym in synonyms:
-            updated_text = updated_text.replace(synonym, canonical)
-
-    return updated_text
+    return clean_and_replace_synonyms(text)
 
 
 # GENERATE N-GRAMS
@@ -256,7 +287,6 @@ def generate_ngrams(tokens, n=2):
     joining registration
     registration fee
     """
-
     return [
         " ".join(tokens[i:i+n])
         for i in range(len(tokens) - n + 1)
@@ -267,31 +297,25 @@ def generate_ngrams(tokens, n=2):
 
 def keyword_analysis(text: str):
     """
-    Detect fraud keywords and calculate keyword score.
+    Detect fraud keywords and calculate keyword score using correctly-ordered
+    synonym matching and dynamically preprocessed keyword stemming.
     """
+    # Step 1: Clean and replace synonyms on raw unstemmed text first
+    cleaned_synonym_text = clean_and_replace_synonyms(text)
 
-    # preprocess
+    # Step 2: Stem and remove stopwords
+    clean_text = preprocess_text(cleaned_synonym_text)
 
-    clean_text = preprocess_text(text)
-
-    # synonym replacement
-
-    clean_text = replace_synonyms(clean_text)
-
-    # tokenize
-
+    # Step 3: Tokenize
     tokens = clean_text.split()
 
     # bigrams
-
     bigrams = generate_ngrams(tokens, 2)
 
     # trigrams
-
     trigrams = generate_ngrams(tokens, 3)
 
     # combine
-
     searchable_terms = (
         tokens +
         bigrams +
@@ -302,18 +326,17 @@ def keyword_analysis(text: str):
 
     matched_scores = []
 
-    # keyword matching
-
+    # keyword matching with dynamically preprocessed and stemmed dictionary keys
     for keyword, score in SCAM_KEYWORDS.items():
+        kw_clean = re.sub(r"[^a-zA-Z0-9\s]", " ", keyword).lower()
+        kw_clean = re.sub(r"\s+", " ", kw_clean).strip()
+        kw_stemmed = preprocess_text(kw_clean)
 
-        if keyword in searchable_terms:
-
+        if kw_stemmed in searchable_terms:
             matched_keywords.append(keyword)
-
             matched_scores.append(score)
 
     # keyword score
-
     if len(matched_scores) == 0:
         keyword_score = 0
     else:
@@ -361,10 +384,10 @@ def get_clean_text(text: str):
 
 def prepare_ml_text(text: str) -> str:
     """
-    Preprocess and replace synonyms.
+    Preprocess and replace synonyms in correct sequence for ML pipeline.
     """
-    clean = preprocess_text(text)
-    clean = replace_synonyms(clean)
+    clean = clean_and_replace_synonyms(text)
+    clean = preprocess_text(clean)
     return clean
 
 
