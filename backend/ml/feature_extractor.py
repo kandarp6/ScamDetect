@@ -1,16 +1,27 @@
-#feature_extractor.py
-
+# feature_extractor.py
 
 import re
 import numpy as np
 import pandas as pd
-from datetime import datetime
-from sklearn.feature_extraction.text import TfidfVectorizer
 import joblib
+import string
+from datetime import datetime
 from pathlib import Path
+from sklearn.feature_extraction.text import TfidfVectorizer
 
-from .nlp_engine import prepare_ml_text
+# Import textstat and spaCy
+import textstat
+from .nlp_engine import (
+    nlp,
+    prepare_ml_text,
+    clean_text,
+    replace_synonyms,
+    lemmatize_text,
+    generate_ngrams,
+)
 
+# Import new modules
+from .domain_analyzer import analyze_domain
 
 # CONSTANTS
 
@@ -27,16 +38,364 @@ LEGIT_KEYWORDS = [
     "interview", "experience required", "qualified",
 ]
 
-PERSONAL_EMAIL_DOMAINS = {"gmail.com", "yahoo.com", "hotmail.com", "outlook.com"}
-DISPOSABLE_DOMAINS = {"mailinator.com", "tempmail.com", "yopmail.com"}
+PERSONAL_EMAIL_DOMAINS = {
+    "gmail.com", "yahoo.com", "yahoo.in", "hotmail.com", "outlook.com", 
+    "rediffmail.com", "rediff.com", "live.com", "icloud.com", 
+    "protonmail.com", "zoho.com", "yandex.com", "aol.com"
+}
+
+DISPOSABLE_DOMAINS = {
+    "mailinator.com", "guerrillamail.com", "tempmail.com", "throwaway.email", 
+    "yopmail.com", "sharklasers.com", "10minutemail.com", "trashmail.com", 
+    "fakeinbox.com", "maildrop.cc", "dispostable.com", "mintemail.com", 
+    "tempinbox.com", "spam4.me"
+}
 
 MODELS_DIR = Path(__file__).parent / "models"
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 TFIDF_PATH = MODELS_DIR / "tfidf_vectorizer.pkl"
+EMBEDDING_MODEL_PATH = MODELS_DIR / "embedding_model"
 
-# Set to True for noisy debug output, False for batch/production use
 VERBOSE = False
 
+# SINGLETON CACHE FOR EMBEDDING MODEL
+_embedding_model = None
+
+def get_embedding_model():
+    """Load SentenceTransformer model (caches locally after first load)."""
+    global _embedding_model
+    if _embedding_model is not None:
+        return _embedding_model
+        
+    from sentence_transformers import SentenceTransformer
+    if EMBEDDING_MODEL_PATH.exists():
+        try:
+            _embedding_model = SentenceTransformer(str(EMBEDDING_MODEL_PATH))
+        except Exception:
+            _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+    else:
+        _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+        try:
+            _embedding_model.save(str(EMBEDDING_MODEL_PATH))
+        except Exception:
+            pass
+            
+    return _embedding_model
+
+# METRIC FUNCTIONS
+
+def extract_readability_features(text: str) -> dict:
+    if not text.strip():
+        return {
+            "flesch_reading_ease": 0.0,
+            "flesch_kincaid_grade": 0.0,
+            "avg_sentence_length": 0.0,
+            "avg_word_length": 0.0,
+            "lexical_diversity": 0.0
+        }
+        
+    words = text.split()
+    unique_words = set(words)
+    lexical_diversity = len(unique_words) / len(words) if len(words) > 0 else 0.0
+    
+    try:
+        fre = textstat.flesch_reading_ease(text)
+    except Exception:
+        fre = 0.0
+    try:
+        fkg = textstat.flesch_kincaid_grade(text)
+    except Exception:
+        fkg = 0.0
+    try:
+        asl = textstat.avg_sentence_length(text)
+    except Exception:
+        asl = 0.0
+    try:
+        awl = textstat.avg_letter_per_word(text)
+    except Exception:
+        awl = 0.0
+        
+    return {
+        "flesch_reading_ease": fre,
+        "flesch_kincaid_grade": fkg,
+        "avg_sentence_length": asl,
+        "avg_word_length": awl,
+        "lexical_diversity": lexical_diversity
+    }
+
+def extract_text_stats(text: str) -> dict:
+    if not text.strip():
+        return {
+            "unique_word_count": 0,
+            "total_word_count": 0,
+            "unique_word_ratio": 0.0,
+            "sentence_count": 0,
+            "average_words_per_sentence": 0.0,
+            "punctuation_count": 0,
+            "capital_letter_ratio": 0.0
+        }
+        
+    words = text.split()
+    total_word_count = len(words)
+    unique_word_count = len(set(words))
+    unique_word_ratio = unique_word_count / total_word_count if total_word_count > 0 else 0.0
+    
+    try:
+        sentence_count = textstat.sentence_count(text)
+    except Exception:
+        sentence_count = len(re.split(r'[.!?]+', text)) - 1
+        if sentence_count <= 0:
+            sentence_count = 1
+            
+    average_words_per_sentence = total_word_count / sentence_count if sentence_count > 0 else 0.0
+    punctuation_count = sum(1 for char in text if char in string.punctuation)
+    capital_letter_ratio = sum(1 for char in text if char.isupper()) / len(text) if len(text) > 0 else 0.0
+    
+    return {
+        "unique_word_count": unique_word_count,
+        "total_word_count": total_word_count,
+        "unique_word_ratio": unique_word_ratio,
+        "sentence_count": sentence_count,
+        "average_words_per_sentence": average_words_per_sentence,
+        "punctuation_count": punctuation_count,
+        "capital_letter_ratio": capital_letter_ratio
+    }
+
+def extract_ner_features(text: str) -> dict:
+    if not text.strip():
+        return {
+            "has_company_name": 0,
+            "organization_count": 0,
+            "location_count": 0,
+            "person_count": 0
+        }
+        
+    doc = nlp(text)
+    org_count = 0
+    loc_count = 0
+    person_count = 0
+    
+    for ent in doc.ents:
+        if ent.label_ == "ORG":
+            org_count += 1
+        elif ent.label_ in ("GPE", "LOC"):
+            loc_count += 1
+        elif ent.label_ == "PERSON":
+            person_count += 1
+            
+    return {
+        "has_company_name": 1 if org_count > 0 else 0,
+        "organization_count": org_count,
+        "location_count": loc_count,
+        "person_count": person_count
+    }
+
+def extract_domain_features(job: dict) -> dict:
+    co_name = job.get("company_name", "") or ""
+    email_domain = job.get("email_domain", "") or ""
+    
+    if not email_domain and job.get("job_description"):
+        m = re.search(r'[a-zA-Z0-9._%+\-]+@([a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})', job["job_description"])
+        if m:
+            email_domain = m.group(1).lower().strip()
+            
+    domain = ""
+    if email_domain and email_domain not in PERSONAL_EMAIL_DOMAINS and email_domain not in DISPOSABLE_DOMAINS:
+        domain = email_domain
+    elif co_name:
+        from .domain_analyzer import _derive_domain
+        domain = _derive_domain(co_name)
+        
+    analysis = analyze_domain(domain)
+    return {
+        "domain_age": float(analysis.get("domain_age", 0.0)),
+        "ssl_valid": 1 if analysis.get("ssl_valid") else 0,
+        "whois_available": 1 if analysis.get("whois_available") else 0,
+        "suspicious_tld": 1 if analysis.get("suspicious_tld") else 0,
+        "domain_reputation_score": float(analysis.get("domain_reputation_score", 50.0)),
+        "domain_risk_score": float(analysis.get("domain_risk_score", 50.0))
+    }
+
+def extract_email_features(job: dict) -> dict:
+    desc = job.get("job_description", "") or ""
+    email_domain = job.get("email_domain", "") or ""
+    if not email_domain and desc:
+        m = re.search(r'@([a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})', desc)
+        if m:
+            email_domain = m.group(1).lower().strip()
+            
+    is_personal = 1 if email_domain in PERSONAL_EMAIL_DOMAINS else 0
+    is_disposable = 1 if email_domain in DISPOSABLE_DOMAINS else 0
+    is_corporate = 1 if (email_domain and not is_personal and not is_disposable) else 0
+    
+    return {
+        "has_corporate_email": is_corporate,
+        "has_personal_email": is_personal,
+        "has_disposable_email": is_disposable
+    }
+
+def extract_payment_features(text: str) -> dict:
+    text_lower = text.lower()
+    
+    has_upi = 1 if any(w in text_lower for w in ["upi", "gpay", "phonepe", "paytm"]) else 0
+    has_crypto = 1 if any(w in text_lower for w in ["crypto", "bitcoin", "usdt", "trx", "ethereum"]) else 0
+    has_bank_transfer = 1 if any(w in text_lower for w in ["bank transfer", "bank details", "transfer funds"]) else 0
+    has_personal_account = 1 if any(w in text_lower for w in ["personal account", "personal bank account"]) else 0
+    
+    has_reg_fee = 1 if "registration fee" in text_lower or "registration charges" in text_lower else 0
+    has_train_fee = 1 if "training fee" in text_lower or "training charges" in text_lower else 0
+    has_deposit = 1 if "deposit" in text_lower or "security deposit" in text_lower else 0
+    has_fee = 1 if " fee" in text_lower or " charges" in text_lower else 0
+    
+    risk = 0.0
+    if has_reg_fee: risk += 90
+    if has_train_fee: risk += 80
+    if has_deposit: risk += 90
+    if "joining fee" in text_lower: risk += 90
+    if "processing fee" in text_lower: risk += 90
+    if has_upi: risk += 80
+    if has_crypto: risk += 80
+    if has_personal_account: risk += 80
+    if has_bank_transfer: risk += 50
+    
+    financial_risk_score = min(100.0, risk)
+    
+    return {
+        "financial_risk_score": financial_risk_score,
+        "has_upi": has_upi,
+        "has_crypto": has_crypto,
+        "has_bank_transfer": has_bank_transfer,
+        "has_personal_account": has_personal_account,
+        "has_registration_fee": has_reg_fee,
+        "has_training_fee": has_train_fee,
+        "has_deposit": has_deposit,
+        "has_fee": has_fee
+    }
+
+def extract_contact_features(text: str) -> dict:
+    text_lower = text.lower()
+    
+    has_whatsapp = 1 if any(w in text_lower for w in ["whatsapp", "whats app", "wa.me"]) else 0
+    has_telegram = 1 if any(w in text_lower for w in ["telegram", "t.me"]) else 0
+    has_instagram = 1 if any(w in text_lower for w in ["instagram", "insta dm", "dm on insta"]) else 0
+    has_discord = 1 if "discord" in text_lower else 0
+    has_signal = 1 if "signal app" in text_lower or "contact on signal" in text_lower else 0
+    has_personal_mobile = 1 if re.search(r'\+?91[\s\-]?[6-9]\d{9}', text) or re.search(r'\b[6-9]\d{9}\b', text) else 0
+    
+    has_email = 1 if re.search(r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}', text) else 0
+    has_phone = 1 if has_personal_mobile else (1 if re.search(r'\b\d{10}\b', text) else 0)
+    
+    risk = 0.0
+    if has_telegram: risk += 45
+    if has_whatsapp: risk += 35
+    if has_instagram: risk += 25
+    if has_discord: risk += 20
+    if has_signal: risk += 30
+    if has_personal_mobile: risk += 30
+    
+    contact_risk_score = min(100.0, risk)
+    
+    return {
+        "contact_risk_score": contact_risk_score,
+        "has_whatsapp": has_whatsapp,
+        "has_telegram": has_telegram,
+        "has_instagram": has_instagram,
+        "has_discord": has_discord,
+        "has_signal": has_signal,
+        "has_personal_mobile": has_personal_mobile,
+        "has_email": has_email,
+        "has_phone": has_phone
+    }
+
+def extract_urgency_features(text: str) -> dict:
+    text_lower = text.lower()
+    
+    has_urgent_hiring = 1 if "urgent hiring" in text_lower else 0
+    has_limited_seats = 1 if "limited seats" in text_lower or "limited slots" in text_lower else 0
+    has_apply_now = 1 if "apply now" in text_lower else 0
+    has_join_immediately = 1 if "join immediately" in text_lower or "immediate joining" in text_lower or "start immediately" in text_lower else 0
+    has_hurry_up = 1 if "hurry up" in text_lower or "hurry" in text_lower else 0
+    has_last_chance = 1 if "last chance" in text_lower or "apply now or never" in text_lower else 0
+    has_same_day = 1 if "same day joining" in text_lower or "direct selection" in text_lower else 0
+    
+    risk = 0.0
+    if has_urgent_hiring: risk += 30
+    if has_limited_seats: risk += 40
+    if has_apply_now: risk += 20
+    if has_join_immediately: risk += 40
+    if has_hurry_up: risk += 30
+    if has_last_chance: risk += 40
+    if has_same_day: risk += 50
+    
+    urgency_score = min(100.0, risk)
+    
+    has_urgent = 1 if (has_urgent_hiring or has_join_immediately or has_hurry_up or "urgent" in text_lower or "immediate" in text_lower) else 0
+    has_guarantee = 1 if ("guarantee" in text_lower or "guaranteed" in text_lower) else 0
+    
+    return {
+        "urgency_score": urgency_score,
+        "has_urgent": has_urgent,
+        "has_guarantee": has_guarantee,
+        "has_urgent_hiring": has_urgent_hiring,
+        "has_limited_seats": has_limited_seats,
+        "has_apply_now": has_apply_now,
+        "has_join_immediately": has_join_immediately,
+        "has_hurry_up": has_hurry_up,
+        "has_last_chance": has_last_chance,
+        "has_same_day": has_same_day
+    }
+
+def extract_fraud_category_scores(desc: str, payment: dict, contact: dict, urgency: dict, email: dict, domain: dict, ner: dict) -> dict:
+    desc_lower = desc.lower()
+    
+    financial_fraud_score = payment["financial_risk_score"]
+    urg_score = urgency["urgency_score"]
+    cnt_risk_score = contact["contact_risk_score"]
+    
+    # identity risk
+    id_risk = 0.0
+    if not email["has_corporate_email"]:
+        id_risk += 30
+    if email["has_disposable_email"]:
+        id_risk += 50
+    if email["has_personal_email"]:
+        id_risk += 20
+    if domain["domain_reputation_score"] < 40:
+        id_risk += 30
+    if not ner["has_company_name"]:
+        id_risk += 25
+        
+    identity_risk_score = min(100.0, id_risk)
+    
+    # recruitment risk
+    rec_risk = 0.0
+    if "no interview" in desc_lower or "without interview" in desc_lower:
+        rec_risk += 40
+    if "no experience" in desc_lower or "freshers can apply" in desc_lower:
+        rec_risk += 30
+    if "no resume" in desc_lower:
+        rec_risk += 30
+    if "no background check" in desc_lower:
+        rec_risk += 20
+        
+    recruitment_risk_score = min(100.0, rec_risk)
+    
+    # Combined keyword score
+    keyword_score = min(100.0, 
+                        0.4 * financial_fraud_score + 
+                        0.2 * cnt_risk_score + 
+                        0.15 * urg_score + 
+                        0.15 * identity_risk_score + 
+                        0.1 * recruitment_risk_score)
+                        
+    return {
+        "financial_fraud_score": financial_fraud_score,
+        "urgency_score": urg_score,
+        "contact_risk_score": cnt_risk_score,
+        "identity_risk_score": identity_risk_score,
+        "recruitment_risk_score": recruitment_risk_score,
+        "keyword_score": keyword_score
+    }
 
 # NUMERIC FEATURE EXTRACTION
 
@@ -46,49 +405,53 @@ def extract_numeric_features(job: dict) -> dict:
 
     desc = job.get("job_description", "") or ""
     title = job.get("job_title", "") or ""
+    desc_lower = desc.lower()
 
-    # Text metrics
+    # Original text metrics
     features["description_length"] = len(desc)
     features["word_count"]         = len(desc.split())
     features["title_length"]       = len(title)
     features["has_description"]    = 1 if len(desc) > 100 else 0
 
-    desc_lower = desc.lower()
-
-    # Keyword counts
+    # Keyword counts (compatibility)
     features["fraud_keyword_count"] = sum(1 for kw in FRAUD_KEYWORDS if kw in desc_lower)
     features["legit_keyword_count"] = sum(1 for kw in LEGIT_KEYWORDS if kw in desc_lower)
 
-    # Contact method flags
-    features["has_email"]     = 1 if re.search(r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}', desc) else 0
-    features["has_phone"]     = 1 if re.search(r'\+?91[\s\-]?[6-9]\d{9}', desc) else 0
-    features["has_whatsapp"]  = 1 if re.search(r'wa\.me/|whatsapp|whats\s*app', desc_lower) else 0
-    features["has_telegram"]  = 1 if re.search(r't\.me/|telegram', desc_lower) else 0
-    features["has_instagram"] = 1 if re.search(r'instagram|insta\b', desc_lower) else 0
+    # Readability features
+    readability = extract_readability_features(desc)
+    features.update(readability)
 
-    # Payment fraud flags
-    features["has_registration_fee"] = 1 if "registration fee" in desc_lower else 0
-    features["has_training_fee"]     = 1 if "training fee" in desc_lower else 0
-    features["has_deposit"]          = 1 if "deposit" in desc_lower else 0
-    features["has_fee"]              = 1 if " fee" in desc_lower else 0
+    # Advanced text statistics
+    stats = extract_text_stats(desc)
+    features.update(stats)
 
-    # Urgent / guarantee language
-    features["has_urgent"] = 1 if any(
-        word in desc_lower for word in ["urgent", "immediate", "limited", "hurry"]
-    ) else 0
-    features["has_guarantee"] = 1 if "guarantee" in desc_lower or "guaranteed" in desc_lower else 0
+    # NER features
+    ner = extract_ner_features(desc)
+    features.update(ner)
 
-    # Email domain analysis
-    email_match = re.search(r'@([a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})', desc)
-    email_domain = email_match.group(1).lower() if email_match else ""
+    # Domain reputation features
+    domain = extract_domain_features(job)
+    features.update(domain)
 
-    features["has_personal_email"]   = 1 if email_domain in PERSONAL_EMAIL_DOMAINS else 0
-    features["has_disposable_email"] = 1 if email_domain in DISPOSABLE_DOMAINS else 0
-    features["has_corporate_email"]  = 1 if (
-        email_domain
-        and email_domain not in PERSONAL_EMAIL_DOMAINS
-        and email_domain not in DISPOSABLE_DOMAINS
-    ) else 0
+    # Email reputation features
+    email = extract_email_features(job)
+    features.update(email)
+
+    # Payment fraud detection
+    payment = extract_payment_features(desc)
+    features.update(payment)
+
+    # Contact risk features
+    contact = extract_contact_features(desc)
+    features.update(contact)
+
+    # Urgency detection
+    urgency = extract_urgency_features(desc)
+    features.update(urgency)
+
+    # Fraud categories and keyword score
+    cats = extract_fraud_category_scores(desc, payment, contact, urgency, email, domain, ner)
+    features.update(cats)
 
     # Salary features
     features["salary_min"]         = float(job.get("salary_min", 0) or 0)
@@ -139,14 +502,9 @@ def extract_numeric_features(job: dict) -> dict:
 
     return features
 
-
 # TF-IDF TEXT FEATURES
 
-def fit_tfidf_vectorizer(descriptions: list, max_features: int = 100) -> TfidfVectorizer:
-    """
-    Train a TF-IDF vectorizer on all job descriptions.
-    Adapts settings automatically for small datasets.
-    """
+def fit_tfidf_vectorizer(descriptions: list, max_features: int = 300) -> TfidfVectorizer:
     descriptions = list(descriptions)
     n_docs = len(descriptions)
 
@@ -157,7 +515,7 @@ def fit_tfidf_vectorizer(descriptions: list, max_features: int = 100) -> TfidfVe
 
     vectorizer = TfidfVectorizer(
         max_features=max_features,
-        ngram_range=(1, 2),
+        ngram_range=(1, 3), # upgraded settings
         stop_words='english',
         min_df=min_df,
         max_df=max_df,
@@ -173,9 +531,7 @@ def fit_tfidf_vectorizer(descriptions: list, max_features: int = 100) -> TfidfVe
 
     return vectorizer
 
-
 def get_tfidf_features(descriptions: list, vectorizer: TfidfVectorizer = None) -> pd.DataFrame:
-    """Convert descriptions to TF-IDF feature matrix."""
     if vectorizer is None:
         vectorizer = joblib.load(TFIDF_PATH)
 
@@ -184,18 +540,9 @@ def get_tfidf_features(descriptions: list, vectorizer: TfidfVectorizer = None) -
 
     return pd.DataFrame(tfidf_matrix.toarray(), columns=feature_names)
 
-
 # MAIN PIPELINE
 
 def build_feature_dataframe(jobs: list, fit_tfidf: bool = True) -> pd.DataFrame:
-    """
-    Convert a list of jobs into a complete feature DataFrame.
-
-    Args:
-        jobs: List of job dicts
-        fit_tfidf: True = train new TF-IDF (training only)
-                   False = load existing (production / prediction)
-    """
     if not jobs:
         return pd.DataFrame()
 
@@ -206,164 +553,207 @@ def build_feature_dataframe(jobs: list, fit_tfidf: bool = True) -> pd.DataFrame:
     numeric_features = [extract_numeric_features(job) for job in jobs]
     df_numeric = pd.DataFrame(numeric_features)
 
-    if VERBOSE:
-        print(f"   Numeric features: {df_numeric.shape[1]} columns")
-
-    # Overwrite job["job_description"] with clean_text before TF-IDF calculation
+    # Overwrite job["job_description"] with clean text
+    # Combine title + description for NLP extraction
+    cleaned_descriptions = []
     for job in jobs:
         desc = job.get("job_description", "") or ""
-        job["job_description"] = prepare_ml_text(desc)
+        title = job.get("job_title", "") or ""
+        clean = prepare_ml_text(desc)
+        job["job_description"] = clean
+        cleaned_descriptions.append(clean + " " + clean_text(title))
 
     # TF-IDF text features
-    descriptions = [
-        (job.get("job_description", "") or "") + " " + (job.get("job_title", "") or "")
-        for job in jobs
-    ]
-
     if fit_tfidf:
-        vectorizer = fit_tfidf_vectorizer(descriptions, max_features=100)
+        vectorizer = fit_tfidf_vectorizer(cleaned_descriptions, max_features=300)
     else:
         vectorizer = joblib.load(TFIDF_PATH)
 
-    df_tfidf = get_tfidf_features(descriptions, vectorizer)
+    df_tfidf = get_tfidf_features(cleaned_descriptions, vectorizer)
 
-    if VERBOSE:
-        print(f"   TF-IDF features:  {df_tfidf.shape[1]} columns")
+    # Semantic embeddings using SentenceTransformer
+    emb_model = get_embedding_model()
+    embeddings = emb_model.encode(cleaned_descriptions, show_progress_bar=False)
+    if len(embeddings.shape) == 1:
+        embeddings = embeddings.reshape(1, -1)
+        
+    emb_cols = [f"emb_{i}" for i in range(embeddings.shape[1])]
+    df_emb = pd.DataFrame(embeddings, columns=emb_cols)
 
-    # Combine
-    df_combined = pd.concat(
-        [df_numeric.reset_index(drop=True), df_tfidf.reset_index(drop=True)],
-        axis=1
-    )
+    # Combine all
+    df_combined = pd.concat([
+        df_numeric.reset_index(drop=True),
+        df_tfidf.reset_index(drop=True),
+        df_emb.reset_index(drop=True)
+    ], axis=1)
 
     if VERBOSE:
         print(f"   Final matrix:     {df_combined.shape[0]} rows x {df_combined.shape[1]} columns")
 
     return df_combined
 
+def load_dataset_from_csv(csv_path: str) -> list:
+    """
+    Load local CSV dataset and map columns to standard job dict format.
+    If a column is missing, handle gracefully with default values.
+    Skills comma-separated string converted to list of strings.
+    cleaned_stipend_monthly converted to numeric, defaults to 0.0.
+    is_scam column mapped to target label 'is_scam'.
+    """
+    csv_path_obj = Path(csv_path)
+    if not csv_path_obj.exists():
+        raise FileNotFoundError(f"Dataset file is missing. Please place the dataset at: {csv_path}")
+        
+    df = pd.read_csv(csv_path_obj)
+    if df.empty:
+        raise ValueError("The loaded dataset is empty.")
+        
+    # Check required target label column: is_scam
+    if "is_scam" not in df.columns:
+        raise ValueError("Required target label column 'is_scam' is missing from the dataset.")
+        
+    jobs = []
+    for _, row in df.iterrows():
+        # Handle columns with grace fallbacks
+        title = row.get("title")
+        job_title = str(title).strip() if pd.notna(title) else "Untitled"
+        
+        desc = row.get("description")
+        job_description = str(desc).strip() if pd.notna(desc) else ""
+        
+        # Parse skills column
+        skills_raw = row.get("skills")
+        if pd.isna(skills_raw) or not str(skills_raw).strip():
+            skills = []
+        else:
+            skills = [s.strip() for s in str(skills_raw).split(",") if s.strip()]
+            
+        company = row.get("company")
+        company_name = str(company).strip() if pd.notna(company) else "Unknown"
+        
+        location = row.get("location")
+        city = str(location).strip() if pd.notna(location) else "Remote"
+        
+        company_website = str(row.get("company_website") or "").strip()
+        domain_name = str(row.get("domain_name") or "").strip().lower()
+        
+        # Parse cleaned_stipend_monthly to float, fallback to 0.0
+        stipend_raw = row.get("cleaned_stipend_monthly")
+        try:
+            stipend = float(stipend_raw) if pd.notna(stipend_raw) else 0.0
+        except ValueError:
+            stipend = 0.0
+            
+        is_scam = int(row.get("is_scam", 0))
+        
+        jobs.append({
+            "job_title": job_title,
+            "job_description": job_description,
+            "skills_required": skills,
+            "skill_categories": {}, # default category
+            "salary_min": stipend,
+            "salary_max": stipend,
+            "salary_raw": str(stipend),
+            "city": city,
+            "state": "",
+            "country": "India",
+            "mode": "Remote",
+            "platform_name": "Unknown",
+            "company_name": company_name,
+            "company_website": company_website,
+            "email_domain": domain_name,
+            "is_scam": is_scam,
+            "scam_score": 100.0 if is_scam == 1 else 0.0,
+            "scam_risk_level": "Scam Likely" if is_scam == 1 else "Safe",
+            "company_trust_score": 50.0,
+            "recruiter_verification_score": 30.0
+        })
+    return jobs
+
+def build_feature_dataframe_from_csv(csv_path: str, fit_tfidf: bool = False) -> pd.DataFrame:
+    """
+    Load data from CSV and extract features to a DataFrame.
+    """
+    jobs = load_dataset_from_csv(csv_path)
+    return build_feature_dataframe(jobs, fit_tfidf=fit_tfidf)
 
 # LABEL EXTRACTION
 
 def extract_labels(jobs: list) -> pd.DataFrame:
     """
-    Extract target labels from jobs for ML training.
-
-    Returns DataFrame with:
-        - scam_score (0-100) — for regression
-        - risk_level (categorical) — for classification
-        - is_scam (0/1) — binary classification
+    Extract is_scam target label directly from jobs.
+    This is the ONLY label column returned for training.
     """
     labels = []
     for job in jobs:
-        score = float(job.get("scam_score", 0) or 0)
-        risk = job.get("scam_risk_level", "Safe") or "Safe"
-        is_scam = 1 if risk in ("High Risk", "Scam Likely") else 0
-
+        # Check is_scam key first
+        if "is_scam" in job:
+            is_scam = int(job["is_scam"])
+        else:
+            # Fallback for compatibility with old test formats
+            risk = job.get("scam_risk_level", "Safe") or "Safe"
+            is_scam = 1 if risk in ("High Risk", "Scam Likely") else 0
+            
         labels.append({
-            "scam_score": score,
-            "risk_level": risk,
-            "is_scam":    is_scam,
+            "is_scam": is_scam
         })
-
+        
     return pd.DataFrame(labels)
-
 
 # SELF-TEST
 
 def _self_test():
-    """Run feature extraction on real Supabase data (or demo data)."""
     global VERBOSE
-    VERBOSE = True  # enable detailed prints for the self-test
+    VERBOSE = True
 
     print("=" * 70)
     print("FEATURE EXTRACTOR - SELF-TEST")
     print("=" * 70)
 
-    print("\nLoading jobs from Supabase...")
-
-    try:
-        from ..scraper.storage.supabase_client import get_client
-        sb = get_client()
-
-        response = sb.table("jobs").select(
-            "*, companies(company_trust_score), recruiters(recruiter_verification_score)"
-        ).execute()
-
-        jobs = response.data
-        print(f"   Loaded {len(jobs)} jobs")
-
-        if not jobs:
-            print("\nNo jobs in database. Run scraper first:")
-            print("    python -m backend.scraper.main")
-            return
-
-        for job in jobs:
-            if job.get("companies"):
-                job["company_trust_score"] = job["companies"].get("company_trust_score", 50)
-            if job.get("recruiters"):
-                job["recruiter_verification_score"] = job["recruiters"].get("recruiter_verification_score", 30)
-
-    except Exception as e:
-        print(f"Failed to load from Supabase: {e}")
-        print("\nFalling back to demo data...")
-
-        jobs = [
-            {
-                "job_title": "Python Developer Intern",
-                "job_description": "Looking for Python developer with Django, AWS skills. Mentorship provided. Health insurance.",
-                "skills_required": ["Python", "Django", "AWS"],
-                "skill_categories": {
-                    "programming": ["Python"],
-                    "frameworks":  ["Django"],
-                    "cloud_devops":["AWS"],
-                },
-                "salary_min": 300000, "salary_max": 500000,
-                "city": "Bengaluru", "mode": "Remote",
-                "platform_name": "Internshala",
-                "scam_score": 15, "scam_risk_level": "Safe",
+    jobs = [
+        {
+            "job_title": "Python Developer Intern",
+            "job_description": "Looking for Python developer with Django, AWS skills. Mentorship provided. Health insurance.",
+            "skills_required": ["Python", "Django", "AWS"],
+            "skill_categories": {
+                "programming": ["Python"],
+                "frameworks":  ["Django"],
+                "cloud_devops":["AWS"],
             },
-            {
-                "job_title": "Earn 50k Daily",
-                "job_description": "Earn 50k daily on WhatsApp! Pay 500 registration fee. Apply on Telegram now!",
-                "skills_required": [],
-                "skill_categories": {},
-                "salary_min": 0, "salary_max": 0,
-                "city": "", "mode": "Remote",
-                "platform_name": "Unknown",
-                "scam_score": 89, "scam_risk_level": "Scam Likely",
-            },
-        ]
+            "salary_min": 300000, "salary_max": 500000,
+            "city": "Bengaluru", "mode": "Remote",
+            "platform_name": "Internshala",
+            "scam_score": 15, "scam_risk_level": "Safe",
+            "company_name": "Google",
+            "email_domain": "google.com"
+        },
+        {
+            "job_title": "Earn 50k Daily",
+            "job_description": "Earn 50k daily on WhatsApp! Pay 500 registration fee. Apply on Telegram now!",
+            "skills_required": [],
+            "skill_categories": {},
+            "salary_min": 0, "salary_max": 0,
+            "city": "", "mode": "Remote",
+            "platform_name": "Unknown",
+            "scam_score": 89, "scam_risk_level": "Scam Likely",
+            "company_name": "Unknown",
+            "email_domain": "tempmail.com"
+        },
+    ]
 
     df_features = build_feature_dataframe(jobs, fit_tfidf=True)
     df_labels = extract_labels(jobs)
 
-    print("\nSAMPLE FEATURES (first 3 rows, first 15 columns):")
-    print(df_features.iloc[:3, :15].to_string())
+    print("\nSAMPLE FEATURES (first 2 rows, first 15 columns):")
+    print(df_features.iloc[:2, :15].to_string())
 
-    print("\nLABELS:")
-    print(df_labels.head().to_string())
+    print("\nTotal features:", df_features.shape[1])
 
-    print("\nSTATISTICS:")
-    print(f"   Total jobs:     {len(df_features)}")
-    print(f"   Total features: {df_features.shape[1]}")
-    print(f"   Scam jobs:      {df_labels['is_scam'].sum()}")
-    print(f"   Safe jobs:      {(df_labels['is_scam'] == 0).sum()}")
-
-    print("\nRISK DISTRIBUTION:")
-    print(df_labels['risk_level'].value_counts().to_string())
-
-    print("\nSaving feature data...")
     features_path = MODELS_DIR / "features.csv"
     labels_path   = MODELS_DIR / "labels.csv"
     df_features.to_csv(features_path, index=False)
     df_labels.to_csv(labels_path, index=False)
-    print(f"   Saved: {features_path}")
-    print(f"   Saved: {labels_path}")
-
-    print("\n" + "=" * 70)
-    print("Self-test complete")
-    print("=" * 70)
-
+    print(f"\nSaved features and labels self-test outputs.")
 
 if __name__ == "__main__":
     _self_test()

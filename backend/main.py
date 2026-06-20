@@ -12,7 +12,8 @@ API docs:
 import os
 import sys
 
-os.environ["PLAYWRIGHT_BROWSERS_PATH"] = r"C:\pw-browsers"
+if os.name == "nt":
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = r"d:\pw-browsers"
 
 _venv_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _pw_driver = os.path.join(
@@ -44,6 +45,8 @@ from backend.scraper.storage.supabase_client import (
 )
 from backend.scraper.engines.url_scraper import scrape_job_url
 
+from playwright_stealth import Stealth
+
 async def stealth_async(page):
     await Stealth().apply_stealth_async(page)
 
@@ -69,6 +72,38 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+async def startup_event():
+    from playwright.async_api import async_playwright
+    from loguru import logger
+    
+    logger.info("Initializing background shared Playwright browser instance...")
+    try:
+        app.state.pw_manager = async_playwright()
+        app.state.playwright = await app.state.pw_manager.start()
+        app.state.browser = await app.state.playwright.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-dev-shm-usage"],
+        )
+        logger.info("Shared Playwright browser started successfully.")
+    except Exception as e:
+        logger.error(f"Failed to start shared background browser: {e}")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    from loguru import logger
+    logger.info("Closing background shared Playwright browser...")
+    try:
+        if hasattr(app.state, "browser"):
+            await app.state.browser.close()
+        if hasattr(app.state, "pw_manager"):
+            await app.state.pw_manager.__aexit__(None, None, None)
+        logger.info("Shared Playwright browser closed successfully.")
+    except Exception as e:
+        logger.error(f"Error closing shared background browser: {e}")
 
 
 class JobAnalysisRequest(BaseModel):
@@ -177,10 +212,17 @@ async def analyze_job(job: JobAnalysisRequest):
 
         return {
             "score": prediction.ensemble_score,
+            "scam_score": prediction.ensemble_score,
             "risk_level": prediction.risk_level,
             "is_scam": prediction.is_scam,
             "confidence": prediction.confidence,
             "summary": _get_summary(prediction.risk_level),
+            "matched_keywords": prediction.matched_keywords,
+            "financial_risk_score": prediction.financial_risk_score,
+            "contact_risk_score": prediction.contact_risk_score,
+            "urgency_score": prediction.urgency_score,
+            "domain_risk_score": prediction.domain_risk_score,
+            "reasons": prediction.reasons,
             "signals": {
                 "language_risk": min(prediction.xgboost_score * 0.7, 100),
                 "salary_risk": min(prediction.random_forest_score * 0.6, 100),
@@ -200,7 +242,28 @@ async def analyze_job(job: JobAnalysisRequest):
 @app.post("/api/analyze/url")
 async def analyze_url(req: UrlRequest):
     try:
-        scraped_data = await scrape_job_url(req.url)
+        browser = None
+        if hasattr(app.state, "browser"):
+            browser = app.state.browser
+            # Re-launch browser if it got disconnected/closed in background
+            try:
+                if not browser.is_connected():
+                    from loguru import logger
+                    logger.warning("Shared background browser disconnected. Re-launching...")
+                    try:
+                        await browser.close()
+                    except Exception:
+                        pass
+                    app.state.browser = await app.state.playwright.chromium.launch(
+                        headless=True,
+                        args=["--no-sandbox", "--disable-dev-shm-usage"],
+                    )
+                    browser = app.state.browser
+            except Exception as e:
+                from loguru import logger
+                logger.error(f"Error checking/restoring shared browser: {e}")
+                
+        scraped_data = await scrape_job_url(req.url, browser=browser)
 
         if scraped_data.get("job_title") == "Scrape Failed":
             return {
@@ -227,10 +290,17 @@ async def analyze_url(req: UrlRequest):
         prediction = predict_job(scraped_data)
         return {
             "score": prediction.ensemble_score,
+            "scam_score": prediction.ensemble_score,
             "risk_level": prediction.risk_level,
             "is_scam": prediction.is_scam,
             "confidence": prediction.confidence,
             "summary": _get_summary(prediction.risk_level),
+            "matched_keywords": prediction.matched_keywords,
+            "financial_risk_score": prediction.financial_risk_score,
+            "contact_risk_score": prediction.contact_risk_score,
+            "urgency_score": prediction.urgency_score,
+            "domain_risk_score": prediction.domain_risk_score,
+            "reasons": prediction.reasons,
             "signals": {
                 "language_risk": min(prediction.xgboost_score * 0.7, 100),
                 "salary_risk": min(prediction.random_forest_score * 0.6, 100),

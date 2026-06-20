@@ -152,6 +152,13 @@ class ScoreBreakdown:
     mismatch_penalty_applied: bool = False
     platform_bonus_applied:   bool = False
 
+    # Expanded category scores
+    financial_fraud_score:  float = 0.0
+    urgency_score:          float = 0.0
+    contact_risk_score:     float = 0.0
+    identity_risk_score:    float = 0.0
+    recruitment_risk_score: float = 0.0
+
 
 # MAIN SCORING FUNCTION
 
@@ -232,18 +239,98 @@ def compute_fraud_score(
             matched_keywords_with_score.append((phrase, severity))
             b.matched_keywords.append(phrase)
 
-    if matched_keywords_with_score:
-        max_severity = max(s for _, s in matched_keywords_with_score)
-        bonus = min(20, len(matched_keywords_with_score) * 5)
-        b.keyword_risk_raw = min(100, max_severity + bonus)
+    # 1. Financial Fraud Score
+    financial_keywords = [
+        "registration fee", "processing fee", "joining fee", "training fee", 
+        "deposit", "security deposit", "refundable deposit", "application fee",
+        "reg fee", "pay before joining"
+    ]
+    fin_matches = [w for w in financial_keywords if w in desc]
+    has_upi_sc = any(w in desc for w in ["upi", "gpay", "phonepe", "paytm"])
+    has_crypto_sc = any(w in desc for w in ["crypto", "bitcoin", "usdt", "trx"])
+    has_bank_sc = any(w in desc for w in ["bank transfer", "bank details", "transfer funds"])
+    has_personal_sc = any(w in desc for w in ["personal account", "personal bank account"])
+    
+    fin_score = 0.0
+    for w in fin_matches:
+        if w in ("registration fee", "joining fee", "processing fee", "security deposit"):
+            fin_score += 90
+        else:
+            fin_score += 70
+    if has_upi_sc: fin_score += 80
+    if has_crypto_sc: fin_score += 80
+    if has_personal_sc: fin_score += 80
+    if has_bank_sc: fin_score += 50
+    b.financial_fraud_score = min(100.0, fin_score)
+    
+    # 2. Urgency Score
+    urgency_keywords = ["urgent hiring", "limited seats", "apply now", "join immediately", "hurry up", "last chance", "same day joining"]
+    urg_matches = [w for w in urgency_keywords if w in desc]
+    urg_score = 0.0
+    for w in urg_matches:
+        if w in ("limited seats", "last chance", "join immediately", "same day joining"):
+            urg_score += 40
+        else:
+            urg_score += 30
+    b.urgency_score = min(100.0, urg_score)
+    
+    # 3. Contact Risk Score
+    cnt_score = 0.0
+    if re.search(r't\.me/|telegram', desc): cnt_score += 45
+    if re.search(r'wa\.me/|whatsapp|whats\s*app', desc): cnt_score += 35
+    if re.search(r'instagram|insta\b', desc): cnt_score += 25
+    if "discord" in desc: cnt_score += 20
+    if "signal" in desc: cnt_score += 30
+    if re.search(r'\+?91[\s\-]?[6-9]\d{9}', desc): cnt_score += 30
+    b.contact_risk_score = min(100.0, cnt_score)
+    
+    # 4. Identity Risk Score
+    id_score = 0.0
+    if email_domain in DISPOSABLE_EMAIL_DOMAINS:
+        id_score += 50
+    elif email_domain in PERSONAL_EMAIL_DOMAINS:
+        id_score += 20
+    elif not email_domain:
+        id_score += 30
+    
+    if company_trust < 30:
+        id_score += 30
+    elif company_trust < 50:
+        id_score += 15
+    b.identity_risk_score = min(100.0, id_score)
+    
+    # 5. Recruitment Risk Score
+    rec_score = 0.0
+    if "no interview" in desc or "without interview" in desc: rec_score += 40
+    if "no experience" in desc or "freshers can apply" in desc: rec_score += 30
+    if "no resume" in desc: rec_score += 30
+    if "no background check" in desc: rec_score += 20
+    b.recruitment_risk_score = min(100.0, rec_score)
+    
+    # Combine category scores
+    combined_kw_score = (
+        0.4 * b.financial_fraud_score +
+        0.2 * b.contact_risk_score +
+        0.15 * b.urgency_score +
+        0.15 * b.identity_risk_score +
+        0.1 * b.recruitment_risk_score
+    )
+    b.keyword_risk_raw = min(100.0, combined_kw_score)
 
-        top_3 = sorted(matched_keywords_with_score, key=lambda x: -x[1])[:3]
-        for phrase, _ in top_3:
-            b.risk_factors.append(f'Suspicious phrase: "{phrase}"')
+    if b.financial_fraud_score > 50:
+        b.risk_factors.append("Financial fraud risk detected")
+    if b.contact_risk_score > 40:
+        b.risk_factors.append("Suspicious contact method requested")
+    if b.urgency_score > 40:
+        b.risk_factors.append("Urgent/pressure hiring tactics detected")
+    if b.identity_risk_score > 40:
+        b.risk_factors.append("Unverifiable recruiter/company identity")
+    if b.recruitment_risk_score > 40:
+        b.risk_factors.append("Unusually lax recruitment requirements")
 
     positive_matches = [kw for kw in POSITIVE_KEYWORDS if kw in desc]
     if positive_matches:
-        b.keyword_risk_raw = max(0, b.keyword_risk_raw - len(positive_matches) * 5)
+        b.keyword_risk_raw = max(0.0, b.keyword_risk_raw - len(positive_matches) * 5)
         b.positive_factors.append(
             f"{len(positive_matches)} professional benefits mentioned"
         )

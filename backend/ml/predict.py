@@ -1,5 +1,4 @@
-#predict.py
-
+# predict.py
 
 import json
 import joblib
@@ -11,9 +10,7 @@ from dataclasses import dataclass, field
 from .feature_extractor import build_feature_dataframe
 from .nlp_engine import prepare_ml_text, process_job_description, calculate_final_score
 
-
 # CONFIGURATION
-
 MODELS_DIR = Path(__file__).parent / "models"
 
 ENSEMBLE_WEIGHTS = {
@@ -22,9 +19,7 @@ ENSEMBLE_WEIGHTS = {
     "isolation_forest": 0.15,
 }
 
-
 # DATA STRUCTURE
-
 @dataclass
 class MLPrediction:
     """Result from ML prediction with explanations."""
@@ -40,9 +35,15 @@ class MLPrediction:
     top_risk_features: list = field(default_factory=list)
     top_safe_features: list = field(default_factory=list)
 
+    # Explainable AI parameters
+    matched_keywords:     list = field(default_factory=list)
+    financial_risk_score: float = 0.0
+    contact_risk_score:   float = 0.0
+    urgency_score:        float = 0.0
+    domain_risk_score:    float = 0.0
+    reasons:              list = field(default_factory=list)
 
-# MODEL LOADING (Singleton  load once, reuse)
-
+# MODEL LOADING (Singleton - load once, reuse)
 _models_cache = {
     "loaded": False,
     "xgboost": None,
@@ -53,14 +54,12 @@ _models_cache = {
     "tfidf": None,
 }
 
-
 def load_models() -> dict:
     """Load all trained models (cached after first call)."""
     if _models_cache["loaded"]:
         return _models_cache
 
     print("Loading trained models...")
-
     try:
         _models_cache["xgboost"]          = joblib.load(MODELS_DIR / "xgboost.pkl")
         _models_cache["random_forest"]    = joblib.load(MODELS_DIR / "random_forest.pkl")
@@ -73,7 +72,6 @@ def load_models() -> dict:
 
         _models_cache["loaded"] = True
         print("   All models loaded successfully")
-
     except FileNotFoundError as e:
         raise RuntimeError(
             f"Models not found: {e}\n"
@@ -82,19 +80,11 @@ def load_models() -> dict:
 
     return _models_cache
 
-
 # PREDICTION FUNCTIONS
 
 def predict_job(job: dict, verbose: bool = False) -> MLPrediction:
     """
     Predict if a single job is a scam.
-
-    Args:
-        job: Job dict (same format as Supabase)
-        verbose: Print details
-
-    Returns:
-        MLPrediction with score, risk level, and explanations
     """
     models = load_models()
 
@@ -108,9 +98,9 @@ def predict_job(job: dict, verbose: bool = False) -> MLPrediction:
 
     # Step 2: Align columns with training data
     expected_cols = models["feature_columns"]
-    for col in expected_cols:
-        if col not in df.columns:
-            df[col] = 0
+    missing_cols = {col: 0 for col in expected_cols if col not in df.columns}
+    if missing_cols:
+        df = pd.concat([df, pd.DataFrame(missing_cols, index=df.index)], axis=1)
     df = df[expected_cols]
 
     # Step 3: Get predictions from each model
@@ -122,7 +112,6 @@ def predict_job(job: dict, verbose: bool = False) -> MLPrediction:
     rf_proba = models["random_forest"].predict_proba(df)[0]
     prediction.random_forest_score = float(rf_proba[1] * 100)
 
-    # Isolation Forest: -1 = anomaly, +1 = normal. Convert to 0-100 score.
     iso_score_raw = models["isolation_forest"].score_samples(df)[0]
     iso_normalized = max(0, min(100, (-iso_score_raw + 0.5) * 100))
     prediction.isolation_forest_score = float(iso_normalized)
@@ -160,21 +149,54 @@ def predict_job(job: dict, verbose: bool = False) -> MLPrediction:
     score_std = float(np.std(scores))
     prediction.confidence = round(max(0, 100 - score_std), 2)
 
+    # Populate Explainable AI Parameters
+    prediction.financial_risk_score = float(df.get("financial_risk_score", [0.0]).iloc[0])
+    prediction.contact_risk_score   = float(df.get("contact_risk_score", [0.0]).iloc[0])
+    prediction.urgency_score        = float(df.get("urgency_score", [0.0]).iloc[0])
+    prediction.domain_risk_score    = float(df.get("domain_risk_score", [0.0]).iloc[0])
+    prediction.matched_keywords     = nlp_analysis.get("matched_keywords", [])
+
+    # Generate reasons based on active features
+    reasons = []
+    if df.get("has_registration_fee", [0]).iloc[0] > 0:
+        reasons.append("Registration fee detected")
+    if df.get("has_training_fee", [0]).iloc[0] > 0:
+        reasons.append("Training fee detected")
+    if df.get("has_deposit", [0]).iloc[0] > 0:
+        reasons.append("Security deposit detected")
+    if df.get("has_telegram", [0]).iloc[0] > 0:
+        reasons.append("Telegram contact detected")
+    if df.get("has_whatsapp", [0]).iloc[0] > 0:
+        reasons.append("WhatsApp contact detected")
+    if df.get("has_personal_email", [0]).iloc[0] > 0:
+        reasons.append("Personal email address used")
+    if df.get("has_disposable_email", [0]).iloc[0] > 0:
+        reasons.append("Disposable email address used")
+    if df.get("has_corporate_email", [0]).iloc[0] == 0:
+        reasons.append("No corporate email")
+    if df.get("domain_age", [0]).iloc[0] < 365 and df.get("domain_age", [0]).iloc[0] > 0:
+        reasons.append("Suspicious domain age")
+    elif df.get("whois_available", [0]).iloc[0] == 0:
+        reasons.append("WHOIS records not available")
+    if df.get("ssl_valid", [0]).iloc[0] == 0:
+        reasons.append("No valid SSL certificate")
+    if df.get("suspicious_tld", [0]).iloc[0] > 0:
+        reasons.append("Suspicious domain extension")
+    prediction.reasons = reasons
+
     prediction.top_risk_features = _get_top_risk_features(df, models)
     prediction.top_safe_features = _get_top_safe_features(df, models)
 
     if verbose:
         print_prediction(prediction, job)
-        print(f"   [HYBRID PIPELINE BRIDGE]")
-        print(f"   ├── Raw NLP Keyword Score: {keyword_score}/100")
-        print(f"   ├── Raw ML Ensemble Score: {ml_ensemble_score:.2f}/100")
-        print(f"   └── Calculated File Score: {prediction.ensemble_score}/100")
+        print("   [HYBRID PIPELINE BRIDGE]")
+        print(f"   |-- Raw NLP Keyword Score: {keyword_score}/100")
+        print(f"   |-- Raw ML Ensemble Score: {ml_ensemble_score:.2f}/100")
+        print(f"   +-- Calculated File Score: {prediction.ensemble_score}/100")
 
     return prediction
 
-
 def predict_batch(jobs: list, verbose: bool = False) -> list:
-    """Predict on multiple jobs at once."""
     if verbose:
         print(f"\nPredicting on {len(jobs)} jobs...")
 
@@ -188,11 +210,9 @@ def predict_batch(jobs: list, verbose: bool = False) -> list:
 
     return results
 
-
 # FEATURE INTERPRETATION
 
 def _get_top_risk_features(df: pd.DataFrame, models: dict, top_n: int = 5) -> list:
-    """Get the top features pushing this job toward 'scam'."""
     rf_model = models["random_forest"]
     feature_importance = rf_model.feature_importances_
     feature_values = df.iloc[0].values
@@ -206,10 +226,10 @@ def _get_top_risk_features(df: pd.DataFrame, models: dict, top_n: int = 5) -> li
         name = feature_names[idx]
         value = feature_values[idx]
 
-        if name.startswith("tfidf_") or value == 0:
+        if name.startswith("tfidf_") or name.startswith("emb_") or value == 0:
             continue
 
-        if risk_scores[idx] > 0.01:
+        if risk_scores[idx] > 0.001:
             risk_features.append({
                 "feature": _humanize_feature_name(name),
                 "value": float(value),
@@ -221,9 +241,7 @@ def _get_top_risk_features(df: pd.DataFrame, models: dict, top_n: int = 5) -> li
 
     return risk_features
 
-
 def _get_top_safe_features(df: pd.DataFrame, models: dict, top_n: int = 3) -> list:
-    """Get features pushing this job toward 'safe'."""
     safe_indicators = []
     job_row = df.iloc[0]
 
@@ -249,9 +267,7 @@ def _get_top_safe_features(df: pd.DataFrame, models: dict, top_n: int = 3) -> li
 
     return safe_indicators
 
-
 def _humanize_feature_name(name: str) -> str:
-    """Convert feature name to human-readable description."""
     name_map = {
         "fraud_keyword_count":   "Contains suspicious keywords",
         "has_registration_fee":  "Mentions registration fee",
@@ -269,11 +285,9 @@ def _humanize_feature_name(name: str) -> str:
     }
     return name_map.get(name, name.replace("_", " ").title())
 
-
 # DISPLAY HELPERS
 
 def print_prediction(prediction: MLPrediction, job: dict = None):
-    """Print a formatted prediction report."""
     print("\n" + "=" * 70)
     if job:
         title = job.get("job_title", "Unknown")[:60]
@@ -305,16 +319,13 @@ def print_prediction(prediction: MLPrediction, job: dict = None):
 
     print("\n" + "=" * 70)
 
-
 # SELF-TEST
-
 def main():
     print("=" * 70)
     print("ML PREDICTION ENGINE - SELF-TEST")
     print("=" * 70)
 
     test_jobs = [
-        # Obvious scam
         {
             "job_title": "Earn 50k Daily From Home!",
             "job_description": (
@@ -332,81 +343,11 @@ def main():
             "mode": "Remote",
             "platform_name": "Unknown",
             "company_name": "ABC IT Solutions Pvt Ltd",
-        },
-
-        # Legitimate job
-        {
-            "job_title": "Python Developer Intern",
-            "job_description": (
-                "We are looking for a passionate Python developer for our team. "
-                "Mentorship provided. Health insurance and ESOP available. "
-                "Apply via our careers page. Stipend: Rs 25,000/month with potential PPO."
-            ),
-            "skills_required": ["Python", "Django", "PostgreSQL", "AWS"],
-            "skill_categories": {
-                "programming": ["Python"],
-                "frameworks":  ["Django"],
-                "databases":   ["PostgreSQL"],
-                "cloud_devops":["AWS"],
-            },
-            "salary_min": 25000,
-            "salary_max": 25000,
-            "salary_raw": "Rs 25,000/month",
-            "city": "Bengaluru",
-            "mode": "Hybrid",
-            "platform_name": "Internshala",
-            "company_name": "Brightline Software",
-        },
-
-        # Medium risk
-        {
-            "job_title": "Marketing Intern - Quick Joining",
-            "job_description": (
-                "Marketing intern needed. Immediate joining. "
-                "Send resume to hr@gmail.com. Salary as per industry."
-            ),
-            "skills_required": ["SEO", "Content Writing"],
-            "skill_categories": {"business": ["SEO", "Content Writing"]},
-            "salary_min": 0,
-            "salary_max": 0,
-            "salary_raw": "Negotiable",
-            "city": "Mumbai",
-            "mode": "Onsite",
-            "platform_name": "Unknown",
-            "company_name": "XYZ Consultancy Services",
-        },
+        }
     ]
 
     for job in test_jobs:
         predict_job(job, verbose=True)
-
-    # Test on real data from Supabase
-    print("\n" + "=" * 70)
-    print("TESTING ON REAL JOBS FROM SUPABASE")
-    print("=" * 70)
-
-    try:
-        from ..scraper.storage.supabase_client import get_client
-        sb = get_client()
-
-        response = sb.table("jobs").select(
-            "*, companies(name, company_trust_score)"
-        ).limit(3).execute()
-
-        for job in response.data:
-            if job.get("companies"):
-                job["company_name"] = job["companies"].get("name", "")
-                job["company_trust_score"] = job["companies"].get("company_trust_score", 50)
-
-            predict_job(job, verbose=True)
-
-    except Exception as e:
-        print(f"Could not test on Supabase data: {e}")
-
-    print("\n" + "=" * 70)
-    print("Self-test complete")
-    print("=" * 70)
-
 
 if __name__ == "__main__":
     main()

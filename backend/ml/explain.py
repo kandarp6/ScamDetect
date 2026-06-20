@@ -65,6 +65,65 @@ FEATURE_DESCRIPTIONS = {
     "mode_remote":           "Remote work",
     "mode_hybrid":           "Hybrid work",
     "mode_onsite":           "On-site work",
+    
+    # New Readability features
+    "flesch_reading_ease":   "Flesch Reading Ease score",
+    "flesch_kincaid_grade":  "Flesch Kincaid Grade level",
+    "avg_sentence_length":   "Average sentence length (words)",
+    "avg_word_length":       "Average word length (chars)",
+    "lexical_diversity":     "Lexical diversity (unique/total words)",
+    
+    # Advanced Text Statistics
+    "unique_word_count":     "Unique word count",
+    "total_word_count":      "Total word count",
+    "unique_word_ratio":     "Ratio of unique words",
+    "sentence_count":        "Sentence count",
+    "average_words_per_sentence": "Average words per sentence",
+    "punctuation_count":     "Punctuation count",
+    "capital_letter_ratio":  "Ratio of capital letters",
+    
+    # NER features
+    "has_company_name":      "Company name found in description",
+    "organization_count":    "Number of organization mentions",
+    "location_count":        "Number of location mentions",
+    "person_count":          "Number of person name mentions",
+    
+    # Domain features
+    "domain_age":            "Domain age (days)",
+    "ssl_valid":             "Domain has valid SSL certificate",
+    "whois_available":       "Domain WHOIS record available",
+    "suspicious_tld":        "Suspicious domain extension (e.g. .xyz)",
+    "domain_reputation_score":"Domain reputation score",
+    "domain_risk_score":     "Domain risk score",
+    
+    # Payment fraud detection
+    "financial_risk_score":  "Financial fraud risk score",
+    "has_upi":               "Asks for UPI payment",
+    "has_crypto":            "Asks for cryptocurrency",
+    "has_bank_transfer":     "Asks for bank transfer",
+    "has_personal_account":  "Asks for payment to personal account",
+    
+    # Contact risk features
+    "contact_risk_score":    "Contact channel risk score",
+    "has_discord":           "Discord contact method",
+    "has_signal":            "Signal contact method",
+    "has_personal_mobile":   "Personal mobile number in description",
+    
+    # Urgency features
+    "urgency_score":         "Urgency indicator score",
+    "has_urgent_hiring":     "Urgent hiring text indicator",
+    "has_limited_seats":     "Limited seats/slots indicator",
+    "has_apply_now":         "Apply now indicator",
+    "has_join_immediately":  "Immediate joining indicator",
+    "has_hurry_up":          "Hurry up/hurry indicator",
+    "has_last_chance":       "Last chance/now or never indicator",
+    "has_same_day":          "Same day joining indicator",
+    
+    # Fraud category scores
+    "financial_fraud_score": "Financial fraud category score",
+    "identity_risk_score":   "Identity risk category score",
+    "recruitment_risk_score":"Recruitment risk category score",
+    "keyword_score":         "Combined keyword risk score"
 }
 
 
@@ -134,9 +193,9 @@ def explain_prediction(
 
     # Step 2: Align columns
     expected_cols = models["feature_columns"]
-    for col in expected_cols:
-        if col not in df.columns:
-            df[col] = 0
+    missing_cols = {col: 0 for col in expected_cols if col not in df.columns}
+    if missing_cols:
+        df = pd.concat([df, pd.DataFrame(missing_cols, index=df.index)], axis=1)
     df = df[expected_cols]
 
     # Step 3: Get SHAP values

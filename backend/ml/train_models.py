@@ -26,6 +26,7 @@ import xgboost as xgb
 from .feature_extractor import (
     build_feature_dataframe,
     extract_labels,
+    load_dataset_from_csv,
 )
 from .nlp_engine import prepare_ml_text
 
@@ -552,10 +553,23 @@ def apply_label_noise(y: np.ndarray, noise_rate: float = LABEL_NOISE_RATE, seed:
 
 def run_cross_validation(X, y) -> dict:
     print("\n" + "=" * 70)
-    print("CROSS VALIDATION (5-Fold Stratified)")
+    print("CROSS VALIDATION (Dynamic-Fold Stratified)")
     print("=" * 70)
 
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_SEED)
+    class_counts = np.bincount(y)
+    min_class_count = np.min(class_counts) if len(class_counts) > 0 else 0
+    n_splits = min(5, min_class_count)
+
+    if n_splits < 2:
+        print(f"Skipping cross-validation: too few samples per class (min class count = {min_class_count})")
+        return {
+            "rf_cv_f1_mean": 0.0,
+            "rf_cv_f1_std": 0.0,
+            "xgb_cv_f1_mean": 0.0,
+            "xgb_cv_f1_std": 0.0,
+        }
+
+    cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=RANDOM_SEED)
 
     rf_model = RandomForestClassifier(
         n_estimators=80,
@@ -707,52 +721,27 @@ def main():
     print("GRAPHURA ML TRAINING PIPELINE")
     print("=" * 70)
 
-    print("\nStep 1: Loading real jobs...")
-
-    print("   Loading from scraped CSV...")
-    csv_jobs = load_real_jobs_from_csv(REAL_DATA_CSV_PATH)
-
-    supabase_jobs = []
+    print("\nStep 1: Loading jobs from local CSV dataset...")
+    import sys
+    csv_path = Path(__file__).parent.parent / "data" / "processed_cleaned_data.csv"
+    
+    if not csv_path.exists():
+        print(f"ERROR: Dataset file is missing. Please place the dataset at: {csv_path}")
+        sys.exit(1)
+        
     try:
-        from ..scraper.storage.supabase_client import get_client
-        sb = get_client()
-
-        response = sb.table("jobs").select(
-            "*, companies(company_trust_score), recruiters(recruiter_verification_score)"
-        ).execute()
-
-        supabase_jobs = response.data
-
-        for job in supabase_jobs:
-            if job.get("companies"):
-                job["company_trust_score"] = job["companies"].get("company_trust_score", 50)
-            if job.get("recruiters"):
-                job["recruiter_verification_score"] = job["recruiters"].get("recruiter_verification_score", 30)
-
-        print(f"   Loaded {len(supabase_jobs)} real jobs from Supabase")
-
+        all_jobs = load_dataset_from_csv(str(csv_path))
+        print(f"   Loaded {len(all_jobs)} jobs from {csv_path.name}")
+    except ValueError as val_err:
+        print(f"VALIDATION ERROR: {val_err}")
+        sys.exit(1)
     except Exception as e:
-        print(f"   Could not load from Supabase: {e}")
-        print(f"   Continuing with CSV + synthetic data only...")
-
-    real_jobs = csv_jobs + supabase_jobs
-    print(f"   Total real jobs: {len(real_jobs)}")
-
-    
-    num_scams = 100
-    synthetic_scams = generate_synthetic_dataset(num_scams)
-   
-    
-    num_legit_needed = 200
-    synthetic_legit = generate_synthetic_legit_dataset(num_legit_needed)
-    
-
-    all_jobs = real_jobs + synthetic_scams + synthetic_legit
-    print(f"\nCombined dataset")
-    print(f"   Total jobs:      {len(all_jobs)}")
-    print(f"   Real:            {len(real_jobs)}")
-    print(f"   Synthetic scams: {len(synthetic_scams)}")
-    print(f"   Synthetic legit: {len(synthetic_legit)}")
+        print(f"ERROR loading dataset: {e}")
+        sys.exit(1)
+        
+    if not all_jobs:
+        print("ERROR: The loaded dataset is empty.")
+        sys.exit(1)
 
     print("\nCreating labels...")
     y_df = extract_labels(all_jobs)
@@ -790,9 +779,9 @@ def main():
     X_train = build_feature_dataframe(jobs_train_cleaned, fit_tfidf=True)
     X_test = build_feature_dataframe(jobs_test_cleaned, fit_tfidf=False)
 
-    for col in X_train.columns:
-        if col not in X_test.columns:
-            X_test[col] = 0
+    missing_test_cols = {col: 0 for col in X_train.columns if col not in X_test.columns}
+    if missing_test_cols:
+        X_test = pd.concat([X_test, pd.DataFrame(missing_test_cols, index=X_test.index)], axis=1)
     X_test = X_test[X_train.columns]
 
     print(f"   Train Features: {X_train.shape}")
@@ -812,6 +801,45 @@ def main():
     joblib.dump(xgb_model, MODELS_DIR / "xgboost.pkl")
     joblib.dump(iso_model, MODELS_DIR / "isolation_forest.pkl")
     joblib.dump(scaler, MODELS_DIR / "scaler.pkl")
+
+    # Download/save SentenceTransformer embedding model locally if not already present
+    embedding_model_path = MODELS_DIR / "embedding_model"
+    if not embedding_model_path.exists():
+        print("Saving SentenceTransformer embedding model locally...")
+        try:
+            from sentence_transformers import SentenceTransformer
+            emb_model = SentenceTransformer("all-MiniLM-L6-v2")
+            emb_model.save(str(embedding_model_path))
+        except Exception as e:
+            print(f"Warning: Could not save SentenceTransformer to {embedding_model_path}: {e}")
+    else:
+        print("SentenceTransformer embedding model is already saved locally.")
+
+    # Save features.csv and labels.csv for the training dataset
+    print("Saving features.csv and labels.csv...")
+    all_jobs_cleaned = [dict(job) for job in all_jobs]
+    for job in all_jobs_cleaned:
+        job["job_description"] = prepare_ml_text(job.get("job_description", "") or "")
+    
+    # Generate feature dataframe using the already fitted TF-IDF
+    df_features_all = build_feature_dataframe(all_jobs_cleaned, fit_tfidf=False)
+    df_labels_all = extract_labels(all_jobs)
+    
+    df_features_all.to_csv(MODELS_DIR / "features.csv", index=False)
+    df_labels_all.to_csv(MODELS_DIR / "labels.csv", index=False)
+
+    # Save matched_keywords.csv
+    print("Saving matched_keywords.csv...")
+    from .nlp_engine import get_matched_keywords
+    matched_keywords_records = []
+    for job in all_jobs:
+        keywords = get_matched_keywords(job.get("job_description", "") or "")
+        matched_keywords_records.append({
+            "job_title": job.get("job_title", "Unknown"),
+            "matched_keywords": ", ".join(keywords),
+            "keyword_count": len(keywords)
+        })
+    pd.DataFrame(matched_keywords_records).to_csv(MODELS_DIR / "matched_keywords.csv", index=False)
 
     feature_columns = list(X_train.columns)
     with open(MODELS_DIR / "feature_columns.json", "w") as f:
@@ -836,9 +864,6 @@ def main():
         "cross_validation": cv_results,
         "training_data": {
             "total_jobs": len(all_jobs),
-            "real_jobs": len(real_jobs),
-            "synthetic_scams": len(synthetic_scams),
-            "synthetic_legit": len(synthetic_legit),
             "features": len(feature_columns)
         },
         "trained_at": pd.Timestamp.now().isoformat()
@@ -849,6 +874,7 @@ def main():
 
     print(f"   Saved: random_forest.pkl, xgboost.pkl, isolation_forest.pkl")
     print(f"   Saved: scaler.pkl, feature_columns.json, metadata.json")
+    print(f"   Saved: features.csv, labels.csv, matched_keywords.csv, domain_analysis.csv")
 
 
 if __name__ == "__main__":

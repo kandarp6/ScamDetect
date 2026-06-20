@@ -1,31 +1,31 @@
 {
   "models": {
     "random_forest": {
-      "accuracy": 0.8285714285714286,
-      "f1_score": 0.8266684287035814,
-      "path": "D:\\Madhav_Gagneja\\INTERNSHIP\\GRAPHURA DATA SCIENCE & AI\\Projects\\Fake_Internship_&_Job_Scam_Detection_System\\Graphura\\Graphura\\backend\\ml\\models\\random_forest.pkl"
+      "accuracy": 0.84,
+      "f1_score": 0.8423280423280423,
+      "path": "D:\\ScamDetect\\backend\\ml\\models\\random_forest.pkl"
     },
     "xgboost": {
-      "accuracy": 0.8571428571428571,
-      "f1_score": 0.8536255411255412,
-      "path": "D:\\Madhav_Gagneja\\INTERNSHIP\\GRAPHURA DATA SCIENCE & AI\\Projects\\Fake_Internship_&_Job_Scam_Detection_System\\Graphura\\Graphura\\backend\\ml\\models\\xgboost.pkl"
+      "accuracy": 0.8133333333333334,
+      "f1_score": 0.8182961692395655,
+      "path": "D:\\ScamDetect\\backend\\ml\\models\\xgboost.pkl"
     },
     "isolation_forest": {
-      "path": "D:\\Madhav_Gagneja\\INTERNSHIP\\GRAPHURA DATA SCIENCE & AI\\Projects\\Fake_Internship_&_Job_Scam_Detection_System\\Graphura\\Graphura\\backend\\ml\\models\\isolation_forest.pkl"
+      "path": "D:\\ScamDetect\\backend\\ml\\models\\isolation_forest.pkl"
     }
   },
   "cross_validation": {
-    "rf_cv_f1_mean": 0.8328236783911824,
-    "rf_cv_f1_std": 0.02832260047301189,
-    "xgb_cv_f1_mean": 0.8344292093910044,
-    "xgb_cv_f1_std": 0.02202059641113888
+    "rf_cv_f1_mean": 0.8363758079611042,
+    "rf_cv_f1_std": 0.036372369509321024,
+    "xgb_cv_f1_mean": 0.7865531546120611,
+    "xgb_cv_f1_std": 0.04267349271924175
   },
   "training_data": {
-    "total_jobs": 350,
-    "real_jobs": 50,
+    "total_jobs": 372,
+    "real_jobs": 72,
     "synthetic_scams": 100,
     "synthetic_legit": 200,
-    "features": 146
+    "features": 773
   },
-  "trained_at": "2026-06-17T15:54:26.574905"
+  "trained_at": "2026-06-20T20:41:45.658035"
 }
