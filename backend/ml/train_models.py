@@ -1,3 +1,46 @@
+import sys
+
+# DEPENDENCY VALIDATION
+REQUIRED_PACKAGES = {
+    "pandas": "pandas",
+    "numpy": "numpy",
+    "sklearn": "scikit-learn",
+    "xgboost": "xgboost",
+    "nltk": "nltk",
+    "joblib": "joblib",
+    "spacy": "spacy",
+    "textstat": "textstat",
+    "sentence_transformers": "sentence-transformers",
+    "shap": "shap"
+}
+
+missing_deps = []
+for module_name, pip_name in REQUIRED_PACKAGES.items():
+    try:
+        __import__(module_name)
+    except ImportError:
+        missing_deps.append((module_name, pip_name))
+
+if missing_deps:
+    for module_name, pip_name in missing_deps:
+        print(f"Missing dependency: {pip_name}")
+        print(f"Run:")
+        print(f"pip install {pip_name}\n")
+    sys.exit(1)
+
+# NLTK AUTO DOWNLOAD logic
+try:
+    import nltk
+    for resource in ["tokenizers/punkt", "tokenizers/punkt_tab", "corpora/stopwords"]:
+        try:
+            nltk.data.find(resource)
+        except LookupError:
+            res_name = resource.split("/")[-1]
+            print(f"Downloading missing NLTK resource: {res_name}...")
+            nltk.download(res_name, quiet=True)
+except Exception as e:
+    print(f"Warning: NLTK initialization failed: {e}")
+
 import json
 import random
 import re
@@ -723,8 +766,10 @@ def main():
 
     print("\nStep 1: Loading jobs from local CSV dataset...")
     import sys
-    csv_path = Path(__file__).parent.parent / "data" / "processed_cleaned_data.csv"
-    
+    csv_path = Path(__file__).parent.parent.parent / "data" / "training" / "processed_cleaned_data.csv"
+    if not csv_path.exists():
+        csv_path = Path(__file__).parent.parent / "data" / "processed_cleaned_data.csv"
+        
     if not csv_path.exists():
         print(f"ERROR: Dataset file is missing. Please place the dataset at: {csv_path}")
         sys.exit(1)
@@ -761,6 +806,10 @@ def main():
     )
     print(f"   Train jobs: {len(jobs_train)}")
     print(f"   Test jobs:  {len(jobs_test)}")
+
+    # Keep a copy of original labels for saving features.csv and labels.csv later
+    y_train_orig = y_train.copy()
+    y_test_orig = y_test.copy()
 
     n_flipped_train = int(len(y_train) * LABEL_NOISE_RATE)
     y_train = apply_label_noise(y_train, noise_rate=LABEL_NOISE_RATE, seed=RANDOM_SEED)
@@ -817,13 +866,8 @@ def main():
 
     # Save features.csv and labels.csv for the training dataset
     print("Saving features.csv and labels.csv...")
-    all_jobs_cleaned = [dict(job) for job in all_jobs]
-    for job in all_jobs_cleaned:
-        job["job_description"] = prepare_ml_text(job.get("job_description", "") or "")
-    
-    # Generate feature dataframe using the already fitted TF-IDF
-    df_features_all = build_feature_dataframe(all_jobs_cleaned, fit_tfidf=False)
-    df_labels_all = extract_labels(all_jobs)
+    df_features_all = pd.concat([X_train, X_test], ignore_index=True)
+    df_labels_all = pd.DataFrame({"is_scam": np.concatenate([y_train_orig, y_test_orig])})
     
     df_features_all.to_csv(MODELS_DIR / "features.csv", index=False)
     df_labels_all.to_csv(MODELS_DIR / "labels.csv", index=False)
